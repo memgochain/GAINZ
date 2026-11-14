@@ -1,0 +1,44 @@
+{
+  "name": "near-agent-guard",
+  "version": "0.1.0",
+  "description": "MCP server for NEAR AI agents, providing policy enforcement and safe transaction execution via GuardVault",
+  "author": "memgochain",
+  "repository": "https://github.com/memgochain/near-agent-guard",
+  
+  "mcpServers": {
+    "near-agent-guard": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "-p", "near_guard_mcp", "--", "--policy", "/absolute/path/policy/policy.json"],
+      "env": {
+        "CEREBRAS_API_KEY": "optional",
+        "NEAR_AI_API_KEY": "optional"
+      }
+    }
+  },
+  
+  "tools": [
+    "near_safe_transfer",
+    "near_policy_status",
+    "near_run_range",
+    "near_audit_trail",
+    "near_report_anchor_payload"
+  ],
+  
+  "integration": {
+    "near_ai_cloud": {
+      "endpoint": "https://near.ai",
+      "model": "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
+      "purpose": "AI agent intent generation and NEAR policy recommendations",
+      "authentication": "Bearer token via NEAR_AI_API_KEY environment variable",
+      "fallback": "CEREBRAS_API_KEY or local simulation if no key provided"
+    }
+  },
+  
+  "authentication": {
+    "guard_vault": {
+      "mechanism": "Function Call Access Key",
+      "description": "Agent holds only a function-call key scoped to GuardVault. It cannot transfer directly, edit limits, add allowlist entries, or anchor reports.",
+      "scopes": ["per-tx cap", "24h window", "allowlist", "asset list", "slippage tolerance"]
+    }
+  }
+}

@@ -1,18 +1,23 @@
-# Fenceline — NEAR Agent Guard
+# GAINZ — Guard AI NEAR ZK
 
 **Give an AI agent a wallet without giving it the treasury. Then prove the policy actually bounds the loss.**
 
 Built for **NEAR HACKATHON 2026** — tracks: `security` (lead), `agents`, `business`.
 
-- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
-- **Repository:** <https://github.com/memgochain/near-agent-guard>
+- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app> (GAINZ edition)
+- **Repository:** <https://github.com/memgochain/near-agent-guard> (GAINZ edition)
 - **Enforcement:** `GuardVault`, a Rust `near-sdk` contract with hard per-tx / 24h / allowlist / slippage limits
 - **Verification:** an analytic loss bound plus a deterministic red-team range that finds the *legal* sequence which breaks the policy
 - **Agent surface:** a Rust MCP server (Claude Desktop / Claude Code / Cursor) that routes every payment through the vault
+- **NEAR AI Cloud integration:** agents can use `NEAR_AI_API_KEY` to connect to https://near.ai with model `fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct` for intent generation and policy recommendations. Falls back to `CEREBRAS_API_KEY` or local simulation.
 - **Privacy:** a Noir circuit proves `spent + tx <= limit` without publishing the limit
 - **Audit:** every action and every report is content-addressed as a real CIDv1 and anchorable on NEAR
 
-> Enforcement is a solved-looking problem with many vendors. **Verification is not.** Fenceline sells the evidence, not another gate.
+## Why GAINZ Is Different
+
+Unlike centralized Python/API proxies that keep treasury private keys on a server, GAINZ enforces all limits, whitelists, and Noir ZK-proofs natively on-chain through the `GuardVault` contract and Function Call Access Keys. Every action is verified in the blockchain, no trusted third party required.
+
+> Enforcement is a solved-looking problem with many vendors. **Verification is not.** GAINZ sells the evidence, not another gate.
 
 ---
 
@@ -83,7 +88,7 @@ not depend on it.
 [ AI agent: Claude / Cursor / Cerebras ]
                 │  Model Context Protocol (stdio)
                 ▼
-[ near_guard_mcp ]  ── policy verdicts, IPLD CIDs, ZK proof hashes
+[ GAINZ MCP ]  ── policy verdicts, IPLD CIDs, ZK proof hashes
                 │  function-call access key (scoped, no full-access key)
                 ▼
 [ GuardVault (near-sdk) ]  ── per-tx cap, 24h window, allowlist, asset list,
@@ -91,8 +96,8 @@ not depend on it.
                 ▼
         NEAR account / recipient
 
-        ┌───────────── verification plane (off-chain, reproducible) ─────────────┐
-        │ near_guard_core:  policy → analytic bound → red-team range → report CID │
+        ┌───────────── verification plane (on-chain, reproducible) ─────────────┐
+        │ GAINZ core:  policy → analytic bound → red-team range → report CID (verified on-chain) │
         │ web MVP (Next.js on Vercel): same engine, byte-identical hashes          │
         │ Noir circuit: proves compliance without revealing the limit             │
         └────────────────────────────────────────────────────────────────────────┘
@@ -106,7 +111,7 @@ not depend on it.
 | `crates/near_guard_core/` | policy compiler, enforcement engine, loss bound, range, CID/report |
 | `crates/near_guard_mcp/` | MCP stdio server, CLI `--demo`, optional Cerebras intent line |
 | `circuits/policy_check/` | Noir circuit: private daily-limit compliance proof |
-| `skills/near-agent-guard/` | agent skill instructions for MCP clients |
+| `skills/near-agent-guard/` (GAINZ) | agent skill instructions for MCP clients |
 | `policy/*.json` | the authored policies used by the demo and the fixtures |
 | `fixtures/policy_vectors.json` | shared vectors asserted by **both** Rust and TypeScript |
 | `web/` | Next.js MVP deployed to Vercel (range UI + enforcement console) |
@@ -184,7 +189,7 @@ cargo near deploy build-non-reproducible-wasm vault-guard.testnet \
 
 ---
 
-## 5. The verification layer (Fenceline)
+## 5. The verification layer (GAINZ)
 
 ### 5.1 Analytic bound
 
@@ -229,7 +234,7 @@ meaningful.
 ```json
 {
   "mcpServers": {
-    "near-agent-guard": {
+    "near-agent-guard": { // GAINZ
       "command": "cargo",
       "args": ["run", "--quiet", "-p", "near_guard_mcp", "--", "--policy", "/absolute/path/policy/policy.json"],
       "env": { "CEREBRAS_API_KEY": "optional" }

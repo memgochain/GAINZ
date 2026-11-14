@@ -12,6 +12,7 @@ export default function NetworkStatus() {
   const [latency, setLatency] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [codeVerified, setCodeVerified] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -35,6 +36,23 @@ export default function NetworkStatus() {
     return () => clearInterval(timer);
   }, [refresh]);
 
+  useEffect(() => {
+    async function fetchContractVerification() {
+      setCodeVerified(null);
+      try {
+        const response = await fetch("/api/contract-verification", {
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("verification failed");
+        const data = await response.json();
+        setCodeVerified(data.verified ? "verified build" : "unknown build");
+      } catch (err) {
+        setCodeVerified("unknown build");
+      }
+    }
+    fetchContractVerification();
+  }, []);
+
   return (
     <a
       className={`chip ${error ? "chip-bad" : "chip-live"}`}
@@ -57,7 +75,7 @@ export default function NetworkStatus() {
         ? "rpc down"
         : loading && height === null
           ? "connecting…"
-          : `testnet · ${height === null ? "…" : height.toLocaleString("en-US")}`}
+          : `${height === null ? "…" : height.toLocaleString("en-US")} ${codeVerified !== null ? `(${codeVerified})` : ``}`}
     </a>
   );
 }

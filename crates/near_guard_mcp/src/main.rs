@@ -31,8 +31,10 @@ FLAGS:
 
 ENVIRONMENT:
     CEREBRAS_API_KEY   Optional. Enables the live agent-intent line in --demo.
-                       Without it the demo uses a deterministic fallback."
-}
+                       Without it the demo uses a deterministic fallback.
+    NEAR_AI_API_KEY    Optional. Enables the NEAR AI Cloud agent intent line in --demo.
+                       Uses https://near.ai endpoint with model fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct.
+                       Falls back to CEREBRAS_API_KEY if set, otherwise local simulation."}
 
 /// Resolve the policy path, also trying the repository layout when the binary is
 /// launched from elsewhere (e.g. from Claude Desktop).
@@ -127,6 +129,68 @@ async fn cerebras_intent(prompt: &str) -> Option<String> {
         .map(|s| s.trim().to_string())
 }
 
+/// Optional NEAR AI Cloud inference for the "agent intent" line.
+async fn near_ai_intent(prompt: &str) -> Option<String> {
+    // 1. Try NEAR AI Cloud key first
+    let near_ai_key = std::env::var("NEAR_AI_API_KEY").ok();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .expect("reqwest client build failed");
+    let body = serde_json::json!({
+        "model": "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
+        "messages": [{ "role": "user", "content": prompt }],
+        "max_tokens": 80
+    });
+    match client.post("https://near.ai/v1/chat/completions")
+        .json(&body)
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            let parsed: serde_json::Value = resp.json().await.ok()?;
+            return parsed["choices"][0]["message"]["content"]
+                .as_str()
+                .map(|s| s.trim().to_string());
+        }
+        Err(_) => {} // fall through to Cerebras below
+    }
+
+    // 2. Fall back to Cerebras key
+    let cerebras_key = std::env::var("CEREBRAS_API_KEY").ok();
+    if let Some(key) = &cerebras_key {
+        if !key.trim().is_empty() {
+            let client2 = reqwest::Client::builder()
+                .timeout(Duration::from_secs(15))
+                .build()
+                .expect("reqwest client build failed");
+            let body = serde_json::json!({
+                "model": "llama3.1-8b",
+                "messages": [{ "role": "user", "content": prompt }],
+                "max_tokens": 80
+            });
+            match client2.post("https://api.cerebras.ai/v1/chat/completions")
+                .header("Authorization", format!("Bearer {key}"))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    let parsed: serde_json::Value = resp.json().await.ok()?;
+                    return parsed["choices"][0]["message"]["content"]
+                        .as_str()
+                        .map(|s| s.trim().to_string());
+                }
+                Err(_) => {} // fall through to local simulation below
+            }
+        }
+    }
+
+    // 3. Local simulation - no API key needed
+    Some(format!("[Local simulation] {prompt}"))
+}
+
+
 async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     let now = now_ms();
     let compiled = policy.compile()?;
@@ -154,12 +218,12 @@ async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     kv("worst case at risk", format!("{} NEAR", format_near(bound.total_value_at_risk_micro)));
     println!();
 
-    match cerebras_intent(
+    match near_ai_intent(
         "You are an autonomous AI agent with a NEAR wallet. In one short sentence, request 1.5 NEAR to pay api-provider.testnet for market data.",
     )
     .await
     {
-        Some(text) => println!("[Cerebras agent intent] {text}\n"),
+        Some(text) => println!("[NEAR AI agent intent] {text}\n"),
         None => println!(
             "[Agent intent] I need to pay api-provider.testnet 1.5 NEAR for market data.\n"
         ),

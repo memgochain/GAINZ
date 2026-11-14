@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RangeChart from "@/components/RangeChart";
 import { formatNear } from "@/lib/amount";
+import { PRESETS } from "@/lib/presets";
 import { ANCHORED_REPORTS, explorerTx } from "@/lib/network";
 import type { RangeReport } from "@/lib/types";
 
@@ -61,6 +62,8 @@ function Share({
 
 export default function RangePanel({ report, running }: Props) {
   const [copied, setCopied] = useState(false);
+  const [swapped, setSwapped] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
 
   if (!report) {
     return (
@@ -89,6 +92,28 @@ export default function RangePanel({ report, running }: Props) {
       setTimeout(() => setCopied(false), 1600);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const swapPolicy = async () => {
+    setSwapped(true);
+    const swappedPolicy = {
+      ...PRESETS.weak.policy,
+      window_model: "rolling",
+    };
+    const res = await fetch("/api/range", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ policy: swappedPolicy, config: { seed: 1337, sequences: 120, horizon_hours: 48, steps_per_sequence: 48 } }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const originalAnchoredCid = ANCHORED_REPORTS.weak.reportHash;
+      const mismatched = data.report.report_hash !== originalAnchoredCid;
+      setMismatch(mismatched);
+      setSwapped(true);
+    } else {
+      setSwapped(false);
     }
   };
 
@@ -208,12 +233,14 @@ export default function RangePanel({ report, running }: Props) {
             {copied ? "copied" : "copy"}
           </button>
         </div>
+        {(!swapped) && (
+          <button type="button" className="ghost" onClick={swapPolicy}>
+            Swap window model
+          </button>
+        )}
         {anchor ? (
           <p className="anchor-hint anchor-ok">
-            <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}
-            <a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">
-              view the anchor transaction ↗
-            </a>
+            <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}<a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">view the anchor transaction ↗</a>
           </p>
         ) : (
           <p className="anchor-hint">
@@ -221,6 +248,9 @@ export default function RangePanel({ report, running }: Props) {
             anchor catches a swapped report. Anchoring needs the owner key, which never ships to the
             browser.
           </p>
+        )}
+        {mismatch && (
+          <p style={{ color: "var(--red)" }}>⚠️ Anchor mismatch: the report CID changed after swapping the window model. The original anchored transaction is <a href={explorerTx(ANCHORED_REPORTS.weak.tx)}>here</a>.</p>
         )}
         <div className="stat-chips">
           <span className="chip chip-quiet">{report.range.sequences_run} sequences</span>
