@@ -2,8 +2,8 @@
 
 **Project:** Fenceline — NEAR Agent Guard
 **Tracks:** `security` (lead), `agents`, `business`
-**Repo:** `{{REPO_URL}}`
-**Live MVP:** `{{VERCEL_URL}}`
+**Repo:** <https://github.com/memgochain/near-agent-guard>
+**Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
 **Video:** `{{VIDEO_URL}}`
 **X post:** `{{X_POST_URL}}`
 
@@ -137,7 +137,7 @@ What's inside:
 🔹 Noir ZK: proves compliance without revealing the limits
 🔹 Rust MCP server for Claude Desktop / Cursor, plus a Next.js MVP on Vercel
 
-Repo: {{REPO_URL}}
+Repo: https://github.com/memgochain/near-agent-guard
 Video: {{VIDEO_URL}}
 
 #NEAR #AIAgents #Security #ZK
@@ -148,7 +148,7 @@ Video: {{VIDEO_URL}}
 - [x] Public repository with a README a judge can run in under five minutes
 - [x] `cargo run -p near_guard_mcp -- --demo` works offline
 - [x] Contract builds to wasm: `cargo build -p guard_vault --target wasm32-unknown-unknown --release`
-- [x] Web MVP deployed to Vercel (no env vars required)
+- [x] Web MVP deployed to Vercel (no env vars required) — <https://fenceline-near-agent-guard.vercel.app>
 - [ ] Video recorded (script in `docs/DEMO_SCRIPT.md`) and uploaded → paste into `{{VIDEO_URL}}`
 - [ ] X post published with the repo and video links → paste into `{{X_POST_URL}}`
 - [ ] Form submitted at <https://nearhackathon.com/#apply> before 14 Nov 2026 23:59 UTC

@@ -4,7 +4,8 @@
 
 Built for **NEAR HACKATHON 2026** — tracks: `security` (lead), `agents`, `business`.
 
-- **Live MVP (Vercel):** see `docs/SUBMISSION.md` for the deployed URL
+- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
+- **Repository:** <https://github.com/memgochain/near-agent-guard>
 - **Enforcement:** `GuardVault`, a Rust `near-sdk` contract with hard per-tx / 24h / allowlist / slippage limits
 - **Verification:** an analytic loss bound plus a deterministic red-team range that finds the *legal* sequence which breaks the policy
 - **Agent surface:** a Rust MCP server (Claude Desktop / Claude Code / Cursor) that routes every payment through the vault
@@ -274,6 +275,7 @@ environment variables are required for the MVP.
 | `cargo test -p guard_vault_sandbox_test` | **not run here**: needs a native OpenSSL dev package and network to download the sandbox node; run it locally to exercise the deployed contract |
 | `cd web && npm test` | 9 tests pass, including identical report CIDs vs Rust |
 | `cd web && npm run build` | production build passes |
+| `vercel deploy --prod` | deployed; `/` and `POST /api/range` verified on the live domain (200, counterexample returned) |
 | `cargo run -p near_guard_mcp -- --demo` | end-to-end demo runs offline |
 
 Benchmark (policy from `policy/policy.json`, seed 1337, 200 sequences × 48 steps = 9 600 actions):

@@ -13,8 +13,8 @@ cargo run -q -p near_guard_mcp -- --demo > /tmp/demo.txt
 cargo build -q -p near_guard_mcp --release
 ```
 
-Browser: open `{{VERCEL_URL}}` (or `http://localhost:3000`), let the first range finish, then
-reload with an empty state so the console is clean.
+Browser: open <https://fenceline-near-agent-guard.vercel.app> (or `http://localhost:3000`), let the
+first range finish, then reload with an empty state so the console is clean.
 
 Terminal: font size ~16, dark theme, window 110x30 minimum, no other tabs.
 
@@ -56,7 +56,7 @@ A "10 NEAR per day" policy loses 20 NEAR in one 24h window, because its budget r
 Fenceline finds that sequence, replays it, and gives the owner a fix plus a report hash to anchor
 on NEAR.
 
-Repo: {{REPO_URL}}
-Live MVP: {{VERCEL_URL}}
+Repo: https://github.com/memgochain/near-agent-guard
+Live MVP: https://fenceline-near-agent-guard.vercel.app
 Built at NEAR HACKATHON.
 ```
