@@ -104,71 +104,85 @@ interface AuditLogView {
   policy_commitment: string;
 }
 
-/** One round trip per call, collected with `Promise.allSettled` so one failure
- *  does not blank the whole panel. */
+/** Snapshot cache: a hit is instant, and 15s of staleness is invisible on a
+ *  block explorer. Without it every page load paid the full RPC round trip. */
+const SNAPSHOT_TTL_MS = 15_000;
+let cachedSnapshot: { at: number; value: NetworkSnapshot } | null = null;
+
+/** Every read goes out in a single parallel batch. Four sequential rounds took
+ *  ~12s on a cold Vercel function, which is what made the site look dead. */
 export async function networkSnapshot(): Promise<NetworkSnapshot> {
+  if (cachedSnapshot && Date.now() - cachedSnapshot.at < SNAPSHOT_TTL_MS) {
+    return cachedSnapshot.value;
+  }
+
   const started = Date.now();
   const errors: string[] = [];
+  const track = async <T,>(label: string, promise: Promise<T>): Promise<T | null> => {
+    try {
+      return await promise;
+    } catch (error) {
+      errors.push(`${label}: ${(error as Error).message}`);
+      return null;
+    }
+  };
 
-  const [status, gas, account] = await Promise.all([
-    rpc<{ chain_id: string; sync_info: { latest_block_height: number; latest_block_hash: string } }>(
+  const [status, gas, account, config, logs, weakAnchor, hardenedAnchor] = await Promise.all([
+    track(
       "status",
-      [],
-    ).catch((error) => {
-      errors.push(`status: ${(error as Error).message}`);
-      return null;
-    }),
-    rpc<{ gas_price: string }>("gas_price", [null]).catch((error) => {
-      errors.push(`gas_price: ${(error as Error).message}`);
-      return null;
-    }),
-    rpc<RpcAccount>("query", {
-      request_type: "view_account",
-      finality: "final",
-      account_id: VAULT,
-    }).catch((error) => {
-      errors.push(`view_account: ${(error as Error).message}`);
-      return null;
-    }),
+      rpc<{ chain_id: string; sync_info: { latest_block_height: number; latest_block_hash: string } }>(
+        "status",
+        [],
+      ),
+    ),
+    track("gas_price", rpc<{ gas_price: string }>("gas_price", [null])),
+    track(
+      "view_account",
+      rpc<RpcAccount>("query", {
+        request_type: "view_account",
+        finality: "final",
+        account_id: VAULT,
+      }),
+    ),
+    track("get_config", viewCall<VaultConfigView>("get_config")),
+    track("get_recent_audit_logs", viewCall<AuditLogView[]>("get_recent_audit_logs", { limit: 5 })),
+    track(
+      "get_report(weak)",
+      viewCall<ReportAnchorView | null>("get_report", {
+        report_hash: ANCHORED_REPORTS.weak.reportHash,
+      }),
+    ),
+    track(
+      "get_report(hardened)",
+      viewCall<ReportAnchorView | null>("get_report", {
+        report_hash: ANCHORED_REPORTS.hardened.reportHash,
+      }),
+    ),
   ]);
 
   const latencyMs = Date.now() - started;
 
-  const [config, logs] = await Promise.all([
-    viewCall<VaultConfigView>("get_config").catch((error) => {
-      errors.push(`get_config: ${(error as Error).message}`);
-      return null;
-    }),
-    viewCall<AuditLogView[]>("get_recent_audit_logs", { limit: 5 }).catch((error) => {
-      errors.push(`get_recent_audit_logs: ${(error as Error).message}`);
-      return null;
-    }),
-  ]);
-
   const anchors: NetworkSnapshot["anchors"] = [];
-  for (const key of ["weak", "hardened"] as const) {
-    const meta = ANCHORED_REPORTS[key];
-    const hash = meta.reportHash;
-    try {
-      const anchor = await viewCall<ReportAnchorView | null>("get_report", { report_hash: hash });
-      if (!anchor) continue;
-      anchors.push({
-        key,
-        reportHash: anchor.report_hash,
-        verdict: anchor.verdict,
-        declaredCapNear: nearFromYocto(anchor.declared_cap),
-        analyticBoundNear: nearFromYocto(anchor.analytic_bound),
-        observedLossNear: nearFromYocto(anchor.observed_loss),
-        counterexamples: anchor.counterexample_count,
-        tx: meta.tx,
-        anchoredAtNs: anchor.anchored_at_ns,
-      });
-    } catch (error) {
-      errors.push(`get_report(${key}): ${(error as Error).message}`);
-    }
+  const anchorPairs = [
+    ["weak", weakAnchor],
+    ["hardened", hardenedAnchor],
+  ] as const;
+  for (const [key, anchor] of anchorPairs) {
+    if (!anchor) continue;
+    anchors.push({
+      key,
+      reportHash: anchor.report_hash,
+      verdict: anchor.verdict,
+      declaredCapNear: nearFromYocto(anchor.declared_cap),
+      analyticBoundNear: nearFromYocto(anchor.analytic_bound),
+      observedLossNear: nearFromYocto(anchor.observed_loss),
+      counterexamples: anchor.counterexample_count,
+      tx: ANCHORED_REPORTS[key].tx,
+      anchoredAtNs: anchor.anchored_at_ns,
+    });
   }
 
-  return {
+  const value: NetworkSnapshot = {
     chainId: status?.chain_id ?? "testnet",
     blockHeight: status?.sync_info.latest_block_height ?? 0,
     blockHash: status?.sync_info.latest_block_hash ?? "",
@@ -223,4 +237,7 @@ export async function networkSnapshot(): Promise<NetworkSnapshot> {
     errors,
     fetchedAt: new Date().toISOString(),
   };
+
+  cachedSnapshot = { at: Date.now(), value };
+  return value;
 }

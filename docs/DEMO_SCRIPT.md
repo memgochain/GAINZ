@@ -13,8 +13,9 @@ cargo run -q -p near_guard_mcp -- --demo > /tmp/demo.txt
 cargo build -q -p near_guard_mcp --release
 ```
 
-Browser: open <https://fenceline-near-agent-guard.vercel.app> (or `http://localhost:3000`), let the
-first range finish, then reload with an empty state so the console is clean.
+Browser: open <https://fenceline-near-agent-guard.vercel.app>, let the first range finish, then
+reload with an empty state so the console is clean. The wallet chip in the top bar connects on both
+NEAR networks (testnet + mainnet) — show it once so judges see real wallet state.
 
 Terminal: font size ~16, dark theme, window 110x30 minimum, no other tabs.
 

@@ -10,6 +10,7 @@ Built for **NEAR HACKATHON 2026** — tracks: `security` (lead), `agents`, `busi
 - **Verification:** an analytic loss bound plus a deterministic red-team range that finds the *legal* sequence which breaks the policy
 - **Agent surface:** a Rust MCP server (Claude Desktop / Claude Code / Cursor) that routes every payment through the vault
 - **NEAR AI Cloud integration:** agents can use `NEAR_AI_API_KEY` to connect to https://near.ai with model `fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct` for intent generation and policy recommendations. Falls back to `CEREBRAS_API_KEY` or local simulation.
+- **Wallet:** connect a NEAR wallet (MyNearWallet via Wallet Selector) on either network wallets support — **testnet or mainnet** — from the top bar; a session is bound to one network, and mainnet is read-only because `GuardVault` is deployed on testnet
 - **Privacy:** a Noir circuit proves `spent + tx <= limit` without publishing the limit
 - **Audit:** every action and every report is content-addressed as a real CIDv1 and anchorable on NEAR
 
@@ -66,7 +67,7 @@ cargo run -p near_guard_mcp -- --demo
 cargo test -p near_guard_core -p near_guard_mcp -p guard_vault --lib
 
 # 3. the web MVP locally
-cd web && npm install && npm run dev      # http://localhost:3000
+open https://fenceline-near-agent-guard.vercel.app   # the deployed MVP
 npm test                                  # parity tests against the shared fixtures
 ```
 
@@ -290,7 +291,7 @@ site — writing to the vault is a deliberate, keyed operation (`anchor_report`,
 ```bash
 cd web
 npm install
-npm run dev      # http://localhost:3000
+# the deployed MVP: https://fenceline-near-agent-guard.vercel.app
 npm run build
 ```
 

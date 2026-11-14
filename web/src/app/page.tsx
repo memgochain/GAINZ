@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ConsolePanel from "@/components/ConsolePanel";
 import LiveOnNear from "@/components/LiveOnNear";
+import NearWallet from "@/components/NearWallet";
 import NetworkStatus from "@/components/NetworkStatus";
 import PolicyPanel from "@/components/PolicyPanel";
 import RangePanel from "@/components/RangePanel";
@@ -176,6 +177,7 @@ export default function Home() {
           <a className="chip chip-quiet" href="#live-on-near">
             live state
           </a>
+          <NearWallet />
           <NetworkStatus />
         </div>
       </header>
