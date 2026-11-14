@@ -3,7 +3,7 @@
   "displayName": "GAINZ — Guard AI NEAR ZK",
   "version": "0.1.0",
   "description": "MCP server that routes every NEAR AI agent payment through GuardVault, which enforces caps, allowlists and Noir proofs on chain.",
-  "repository": "https://github.com/memgochain/near-agent-guard",
+  "repository": "https://github.com/memgochain/GAINZ",
   "mcpServers": {
     "near-agent-guard": {
       "command": "cargo",

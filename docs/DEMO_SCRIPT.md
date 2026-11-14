@@ -13,7 +13,7 @@ cargo run -q -p near_guard_mcp -- --demo > /tmp/demo.txt
 cargo build -q -p near_guard_mcp --release
 ```
 
-Browser: open <https://fenceline-near-agent-guard.vercel.app>, let the first range finish, then
+Browser: open <https://gainz-near-agent-guard.vercel.app>, let the first range finish, then
 reload with an empty state so the console is clean. The wallet chip in the top bar connects on both
 NEAR networks (testnet + mainnet) — show it once so judges see real wallet state.
 
@@ -63,7 +63,7 @@ A "10 NEAR per day" policy loses 20 NEAR in one 24h window, because its budget r
 GAINZ finds that sequence, replays it, and gives the owner a fix plus a report hash to anchor
 on NEAR.
 
-Repo: https://github.com/memgochain/near-agent-guard
-Live MVP: https://fenceline-near-agent-guard.vercel.app
+Repo: https://github.com/memgochain/GAINZ
+Live MVP: https://gainz-near-agent-guard.vercel.app
 Built at NEAR HACKATHON.
 ```

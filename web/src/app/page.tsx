@@ -168,7 +168,7 @@ export default function Home() {
           </a>
           <a
             className="chip chip-quiet"
-            href="https://github.com/memgochain/near-agent-guard"
+            href="https://github.com/memgochain/GAINZ"
             target="_blank"
             rel="noreferrer"
           >

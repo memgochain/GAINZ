@@ -2,8 +2,8 @@
 
 **Project:** GAINZ — Guard AI NEAR ZK
 **Tracks:** `security` (lead), `agents`, `business`
-**Repo:** <https://github.com/memgochain/near-agent-guard>
-**Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
+**Repo:** <https://github.com/memgochain/GAINZ>
+**Live MVP:** <https://gainz-near-agent-guard.vercel.app>
 **Live contract (NEAR testnet):** <https://testnet.nearblocks.io/address/fenceline-vault-8t1bk.testnet>
 **Video:** `{{VIDEO_URL}}`
 **X post:** `{{X_POST_URL}}`
@@ -138,7 +138,7 @@ What's inside:
 🔹 Noir ZK: proves compliance without revealing the limits
 🔹 Rust MCP server for Claude Desktop / Cursor, plus a Next.js MVP on Vercel
 
-Repo: https://github.com/memgochain/near-agent-guard
+Repo: https://github.com/memgochain/GAINZ
 Video: {{VIDEO_URL}}
 
 #NEAR #AIAgents #Security #ZK
@@ -149,7 +149,7 @@ Video: {{VIDEO_URL}}
 - [x] Public repository with a README a judge can run in under five minutes
 - [x] `cargo run -p near_guard_mcp -- --demo` works offline
 - [x] Contract builds to wasm: `cargo build -p guard_vault --target wasm32-unknown-unknown --release`
-- [x] Web MVP deployed to Vercel (no env vars required) — <https://fenceline-near-agent-guard.vercel.app>
+- [x] Web MVP deployed to Vercel (no env vars required) — <https://gainz-near-agent-guard.vercel.app>
 - [x] `GuardVault` deployed to NEAR testnet (`fenceline-vault-8t1bk.testnet`) and two report CIDs anchored; the MVP reads the contract live via `/api/network`
 - [ ] Video recorded (script in `docs/DEMO_SCRIPT.md`) and uploaded → paste into `{{VIDEO_URL}}`
 - [ ] X post published with the repo and video links → paste into `{{X_POST_URL}}`

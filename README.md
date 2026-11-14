@@ -4,8 +4,8 @@
 
 Built for **NEAR HACKATHON 2026** — tracks: `security` (lead), `agents`, `business`.
 
-- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
-- **Repository:** <https://github.com/memgochain/near-agent-guard>
+- **Live MVP:** <https://gainz-near-agent-guard.vercel.app>
+- **Repository:** <https://github.com/memgochain/GAINZ>
 - **Enforcement:** `GuardVault`, a Rust `near-sdk` contract with hard per-tx / 24h / allowlist / slippage limits
 - **Verification:** an analytic loss bound plus a deterministic red-team range that finds the *legal* sequence which breaks the policy
 - **Agent surface:** a Rust MCP server (Claude Desktop / Claude Code / Cursor) that routes every payment through the vault
@@ -67,7 +67,7 @@ cargo run -p near_guard_mcp -- --demo
 cargo test -p near_guard_core -p near_guard_mcp -p guard_vault --lib
 
 # 3. the web MVP locally
-open https://fenceline-near-agent-guard.vercel.app   # the deployed MVP
+open https://gainz-near-agent-guard.vercel.app   # the deployed MVP
 npm test                                  # parity tests against the shared fixtures
 ```
 
@@ -291,7 +291,7 @@ site — writing to the vault is a deliberate, keyed operation (`anchor_report`,
 ```bash
 cd web
 npm install
-# the deployed MVP: https://fenceline-near-agent-guard.vercel.app
+# the deployed MVP: https://gainz-near-agent-guard.vercel.app
 npm run build
 ```
 
