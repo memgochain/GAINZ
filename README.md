@@ -270,7 +270,7 @@ environment variables are required for the MVP.
 |---|---|
 | `cargo test -p near_guard_core -p near_guard_mcp` | 24 tests pass (engine rules, window semantics, bound math, range properties, CID validity, MCP protocol) |
 | `cargo test -p near_guard_core --test vectors` | 6 parity/vector tests pass |
-| `cargo test -p guard_vault --lib` | 3 window-semantics tests pass on the host |
+| `cargo test -p guard_vault --lib` | 17 contract arithmetic tests pass on the host: spend accumulation per window, prune, remaining budget, cap boundaries, overflow safety |
 | `cargo build -p guard_vault --target wasm32-unknown-unknown --release` | contract compiles to a 424 KB wasm |
 | `cargo test -p guard_vault_sandbox_test` | **not run here**: needs a native OpenSSL dev package and network to download the sandbox node; run it locally to exercise the deployed contract |
 | `cd web && npm test` | 9 tests pass, including identical report CIDs vs Rust |

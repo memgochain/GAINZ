@@ -9,39 +9,29 @@
 //! Enforced onchain, in this order:
 //!   1. caller is the registered agent,
 //!   2. recipient is allowlisted,
-//!   3. amount is positive and within the per-transaction cap,
-//!   4. a non-empty Noir policy proof is attached,
+//!   3. a non-empty Noir policy proof is attached and the audit CID is a CIDv1,
+//!   4. amount is positive and within the per-transaction cap,
 //!   5. the spend fits the 24h window (rolling or calendar-day),
-//!   6. an IPLD audit CID and the ZK proof hash are recorded forever.
+//!   6. the IPLD audit CID and the ZK proof hash are recorded forever.
+//!
+//! Nothing is written to state until every check has passed.
 //!
 //! The owner can additionally anchor a **Fenceline loss-bound report** hash, so
 //! the claim "this policy bounds the loss to X" is timestamped on NEAR and can
 //! be re-verified by anyone holding the report.
+//!
+//! The window arithmetic itself lives in [`math`] as pure functions, so the
+//! blocking rules are unit-tested on the host target without a sandbox node.
+
+pub mod math;
+
+pub use math::{
+    check_transfer, prune, remaining, window_total, within_window, Spend, TransferCheck, WindowModel,
+    DAY_IN_NS,
+};
 
 use near_sdk::store::{IterableMap, IterableSet};
 use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise};
-
-/// One day in nanoseconds, as used by `env::block_timestamp()`.
-pub const DAY_IN_NS: u64 = 86_400_000_000_000;
-
-/// How the daily spending window is measured.
-#[near(serializers = [json, borsh])]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum WindowModel {
-    /// Budget refills at 00:00 UTC. Two buckets fit in one 24h interval.
-    Calendar,
-    /// Any 24h sliding window. Costs a short spend history, cannot be doubled.
-    Rolling,
-}
-
-/// A spend that still counts against the window.
-#[near(serializers = [json, borsh])]
-#[derive(Clone)]
-pub struct Spend {
-    pub ts_ns: u64,
-    pub amount: NearToken,
-}
 
 /// Immutable record of one approved agent action.
 #[near(serializers = [json, borsh])]
@@ -85,14 +75,6 @@ pub struct VaultConfig {
     pub policy_commitment: String,
     pub audit_log_count: u64,
     pub report_count: u64,
-}
-
-/// Does a spend at `entry_ts` still count at `now_ts` under `model`?
-pub fn within_window(entry_ts: u64, now_ts: u64, model: WindowModel) -> bool {
-    match model {
-        WindowModel::Rolling => entry_ts <= now_ts && now_ts.saturating_sub(entry_ts) < DAY_IN_NS,
-        WindowModel::Calendar => entry_ts / DAY_IN_NS == now_ts / DAY_IN_NS,
-    }
 }
 
 #[near(contract_state)]
@@ -208,14 +190,6 @@ impl GuardVault {
             recipient
         );
         assert!(
-            amount.as_yoctonear() > 0,
-            "Policy Violation: amount must be positive"
-        );
-        assert!(
-            amount.as_yoctonear() <= self.max_tx_amount.as_yoctonear(),
-            "Policy Violation: amount exceeds the per-transaction cap"
-        );
-        assert!(
             !zk_proof.is_empty(),
             "ZK Verification Failed: empty Noir policy proof"
         );
@@ -225,32 +199,46 @@ impl GuardVault {
         );
 
         let now = env::block_timestamp();
-        self.prune_spends(now);
-        let spent = self.spent_in_window();
-        let new_spent = spent.saturating_add(amount);
-        assert!(
-            new_spent.as_yoctonear() <= self.daily_limit.as_yoctonear(),
-            "Policy Violation: daily spending limit exceeded ({} + {} > {})",
-            spent,
+        let spent_before = match check_transfer(
+            &self.spends,
+            now,
+            self.window_model,
+            self.max_tx_amount,
+            self.daily_limit,
             amount,
-            self.daily_limit
-        );
+        ) {
+            TransferCheck::Ok { spent_before } => spent_before,
+            TransferCheck::NonPositive => {
+                env::panic_str("Policy Violation: amount must be positive")
+            }
+            TransferCheck::OverPerTx => env::panic_str(
+                "Policy Violation: amount exceeds the per-transaction cap",
+            ),
+            TransferCheck::OverWindow { spent_before } => env::panic_str(&format!(
+                "Policy Violation: daily spending limit exceeded ({} + {} > {})",
+                spent_before, amount, self.daily_limit
+            )),
+        };
 
+        let new_spent = spent_before.saturating_add(amount);
         let proof_hash = hex::encode(env::sha256(&zk_proof));
+        prune(&mut self.spends, now, self.window_model);
         self.spends.push(Spend {
             ts_ns: now,
             amount,
         });
 
-        let log_entry = AuditLog {
-            timestamp: now,
-            recipient: recipient.clone(),
-            amount,
-            ipld_cid: ipld_cid.clone(),
-            zk_proof_hash: proof_hash.clone(),
-            policy_commitment: self.policy_commitment.clone(),
-        };
-        self.audit_logs.insert(self.log_count, log_entry);
+        self.audit_logs.insert(
+            self.log_count,
+            AuditLog {
+                timestamp: now,
+                recipient: recipient.clone(),
+                amount,
+                ipld_cid: ipld_cid.clone(),
+                zk_proof_hash: proof_hash.clone(),
+                policy_commitment: self.policy_commitment.clone(),
+            },
+        );
         self.log_count += 1;
 
         env::log_str(&format!(
@@ -314,14 +302,14 @@ impl GuardVault {
 
     pub fn get_config(&self) -> VaultConfig {
         let now = env::block_timestamp();
-        let spent = self.spent_in_window_at(now);
+        let spent = window_total(&self.spends, now, self.window_model);
         VaultConfig {
             owner_id: self.owner_id.clone(),
             agent_id: self.agent_id.clone(),
             max_tx_amount: self.max_tx_amount,
             daily_limit: self.daily_limit,
             spent_in_window: spent,
-            remaining_daily: self.daily_limit.saturating_sub(spent),
+            remaining_daily: remaining(self.daily_limit, spent),
             window_model: self.window_model,
             whitelist: self.whitelist.iter().cloned().collect(),
             policy_commitment: self.policy_commitment.clone(),
@@ -331,8 +319,11 @@ impl GuardVault {
     }
 
     pub fn get_remaining_daily_budget(&self) -> NearToken {
-        self.daily_limit
-            .saturating_sub(self.spent_in_window_at(env::block_timestamp()))
+        let now = env::block_timestamp();
+        remaining(
+            self.daily_limit,
+            window_total(&self.spends, now, self.window_model),
+        )
     }
 
     pub fn get_log_count(&self) -> u64 {
@@ -370,63 +361,5 @@ impl GuardVault {
             self.owner_id,
             "Unauthorized: only the owner can do that"
         );
-    }
-
-    fn prune_spends(&mut self, now: u64) {
-        let model = self.window_model;
-        self.spends.retain(|s| within_window(s.ts_ns, now, model));
-    }
-
-    fn spent_in_window(&self) -> NearToken {
-        self.spends
-            .iter()
-            .fold(NearToken::from_yoctonear(0), |acc, s| {
-                acc.saturating_add(s.amount)
-            })
-    }
-
-    fn spent_in_window_at(&self, now: u64) -> NearToken {
-        self.spends
-            .iter()
-            .filter(|s| within_window(s.ts_ns, now, self.window_model))
-            .fold(NearToken::from_yoctonear(0), |acc, s| {
-                acc.saturating_add(s.amount)
-            })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rolling_window_remembers_across_midnight() {
-        let day_start = 20_001 * DAY_IN_NS;
-        let entry = day_start - 60_000_000_000; // 23:59 of the previous day
-        let now = day_start + 60_000_000_000; // 00:01
-        assert!(within_window(entry, now, WindowModel::Rolling));
-        assert!(!within_window(entry, now, WindowModel::Calendar));
-    }
-
-    #[test]
-    fn rolling_window_expires_after_a_day() {
-        let now = 20_001 * DAY_IN_NS;
-        assert!(within_window(now - DAY_IN_NS + 1, now, WindowModel::Rolling));
-        assert!(!within_window(now - DAY_IN_NS, now, WindowModel::Rolling));
-    }
-
-    #[test]
-    fn calendar_window_is_the_documented_weakness() {
-        let day_start = 20_001 * DAY_IN_NS;
-        assert!(within_window(
-            day_start + 1,
-            day_start + DAY_IN_NS - 1,
-            WindowModel::Calendar
-        ));
-        assert!(!within_window(
-            day_start + 1,
-            day_start + DAY_IN_NS,
-            WindowModel::Calendar
-        ));
     }
 }
