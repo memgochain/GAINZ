@@ -10,10 +10,12 @@ const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org";
 
 /**
  * Candidate locations of the release wasm, relative to the Next.js app root
- * (`web/`). `GUARD_VAULT_WASM` wins so a deploy can point at its own artifact.
+ * (`web/`). The committed release artifact comes first because it is what a
+ * Vercel deployment actually ships; the cargo output is the local fallback.
  */
 const WASM_CANDIDATES = [
   process.env.GUARD_VAULT_WASM,
+  "contracts/guard_vault.wasm",
   "../target/wasm32-unknown-unknown/release/guard_vault.wasm",
   "target/wasm32-unknown-unknown/release/guard_vault.wasm",
 ].filter((candidate): candidate is string => Boolean(candidate));

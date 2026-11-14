@@ -21,3 +21,4 @@ web/coverage
 
 # local scratch/artifacts
 .scratch/
+artifacts/
