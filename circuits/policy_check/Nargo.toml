@@ -1,0 +1,7 @@
+[package]
+name = "policy_check"
+type = "bin"
+authors = ["NEAR Hackathon Builder"]
+compiler_version = ">=0.36.0"
+
+[dependencies]

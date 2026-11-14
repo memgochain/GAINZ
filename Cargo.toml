@@ -1,0 +1,15 @@
+[workspace]
+members = ["contracts/guard_vault", "contracts/sandbox_test", "crates/near_guard_core", "crates/near_guard_mcp"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

@@ -1,0 +1,21 @@
+[package]
+name = "guard_vault"
+version = "0.1.0"
+edition = "2021"
+description = "Onchain treasury vault for AI agents: per-tx caps, 24h window limits, allowlists, ZK policy proofs and IPLD audit anchoring"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.5.0"
+hex = "0.4.3"
+
+# `unit-testing` lets the pure logic in this crate be tested on the host target.
+# The onchain sandbox test lives in `contracts/sandbox_test` so that this crate
+# does not need a TLS stack to run its own unit tests.
+[dev-dependencies]
+near-sdk = { version = "5.5.0", features = ["unit-testing"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_arch, values("wasm32"))'] }
