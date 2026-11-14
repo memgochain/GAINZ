@@ -44,6 +44,12 @@ rolling-window fix and the `near call ... anchor_report` line — exactly what a
   touches the network.
 - Slider drags look jittery: pre-set the policy, and only click **Run range**.
 
+## Recorded cut
+
+[`gainz-demo.mp4`](gainz-demo.mp4) is the assembled 80 second, 1080p/30fps cut. It follows the shot
+list above and adds the tamper beat (`Tamper with the policy` → new CID → red anchor-mismatch banner
+linking the original transaction). Still frames used for it live in `artifacts/video/frames/`.
+
 ## Upload
 
 Title: `GAINZ — proving your AI agent's spending policy actually bounds the loss (NEAR Hackathon 2026)`

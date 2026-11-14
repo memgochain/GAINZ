@@ -62,8 +62,8 @@ function Share({
 
 export default function RangePanel({ report, running }: Props) {
   const [copied, setCopied] = useState(false);
-  const [swappedReport, setSwappedReport] = useState<RangeReport | null>(null);
-  const [swapFailed, setSwapFailed] = useState(false);
+  const [tamperedReport, setTamperedReport] = useState<RangeReport | null>(null);
+  const [tamperFailed, setSwapFailed] = useState(false);
 
   if (!report) {
     return (
@@ -79,15 +79,15 @@ export default function RangePanel({ report, running }: Props) {
     );
   }
 
-  // After a swap the panel shows the new report; the anchor lookup below then
-  // fails, which is exactly the evidence that the policy change is visible.
-  const shown = swappedReport ?? report;
+  // After a tamper the panel shows the new report; the anchor lookup below
+  // then fails, which is exactly the evidence that the edit is visible.
+  const shown = tamperedReport ?? report;
   const breach = shown.range.observed_max_loss_micro > shown.declared_daily_cap_micro;
   const counterexample = shown.range.counterexamples[0];
   const anchor = Object.values(ANCHORED_REPORTS).find(
     (entry) => entry.reportHash === shown.report_hash,
   );
-  const swapUnanchored = swappedReport !== null && !anchor;
+  const mismatch = tamperedReport !== null && !anchor;
 
   const copy = async () => {
     try {
@@ -99,18 +99,23 @@ export default function RangePanel({ report, running }: Props) {
     }
   };
 
-  const swapPolicy = async () => {
+  const tamperPolicy = async () => {
     setSwapFailed(false);
     try {
       const response = await fetch("/api/range", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        // Same limits, same seed — only the window model changes.
-        body: JSON.stringify({ policy: PRESETS.hardened.policy, config: DEFAULT_CONFIG }),
+        // A one-line policy edit (rolling window, 12 NEAR daily cap). The report
+        // the range produces is therefore not the anchored one, which is the
+        // whole point: the anchor is what makes the edit visible.
+        body: JSON.stringify({
+          policy: { ...PRESETS.hardened.policy, daily_cap: PRESETS.hardened.policy.daily_cap + 2 },
+          config: DEFAULT_CONFIG,
+        }),
       });
       if (!response.ok) throw new Error("range request failed");
       const payload = await response.json();
-      setSwappedReport(payload.report as RangeReport);
+      setTamperedReport(payload.report as RangeReport);
     } catch {
       setSwapFailed(true);
     }
@@ -236,12 +241,12 @@ export default function RangePanel({ report, running }: Props) {
         <button
           type="button"
           className="ghost"
-          onClick={swappedReport ? () => setSwappedReport(null) : swapPolicy}
+          onClick={tamperedReport ? () => setTamperedReport(null) : tamperPolicy}
         >
-          {swappedReport ? "Restore original report" : "Swap window model"}
+          {tamperedReport ? "Restore original report" : "Tamper with the policy"}
         </button>
-        {swapFailed ? (
-          <p className="anchor-hint anchor-bad">Could not run the swapped policy. Try again.</p>
+        {tamperFailed ? (
+          <p className="anchor-hint anchor-bad">Could not run the modified policy. Try again.</p>
         ) : null}
 
         {anchor ? (
@@ -259,11 +264,11 @@ export default function RangePanel({ report, running }: Props) {
           </p>
         )}
 
-        {swapUnanchored ? (
+        {mismatch ? (
           <p className="anchor-hint anchor-bad">
-            <span className="dot dot-bad" aria-hidden /> Anchor mismatch: after swapping the window
-            model this policy hashes to <code>{shown.report_hash}</code>, which is not the CID
-            anchored on NEAR testnet. The original anchor is{" "}
+            <span className="dot dot-bad" aria-hidden /> Anchor mismatch: this edited policy hashes
+            to <code>{shown.report_hash}</code>, which is not the CID anchored on NEAR testnet. The
+            original anchor is{" "}
             <a href={explorerTx(ANCHORED_REPORTS.weak.tx)} target="_blank" rel="noreferrer">
               still on chain ↗
             </a>

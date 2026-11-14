@@ -342,7 +342,8 @@ Benchmark (policy from `policy/policy.json`, seed 1337, 200 sequences × 48 step
 ## 10. Hackathon submission
 
 - Public repository: this repo
-- Demo video (60–90s) and shot list: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- Demo video (80s, 1080p): [`docs/gainz-demo.mp4`](docs/gainz-demo.mp4)
+- Shot list and voiceover: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 - Form answers, tracks, and the X post: [`docs/SUBMISSION.md`](docs/SUBMISSION.md)
 - Threat model and attack taxonomy: [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)
 
