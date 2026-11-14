@@ -67,7 +67,7 @@ export default function LiveOnNear({ reportHash }: Props) {
         </p>
       ) : null}
 
-      {!snapshot && loading ? <p className="empty">Querying rpc.testnet.near.org…</p> : null}
+      {!snapshot && loading ? <p className="empty">Querying rpc.testnet.fastnear.com…</p> : null}
 
       {snapshot ? (
         <>

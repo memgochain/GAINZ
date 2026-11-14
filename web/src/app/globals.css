@@ -71,9 +71,10 @@ body::before {
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 14px 0;
   border-bottom: 1px solid var(--line-soft);
   backdrop-filter: blur(14px);
@@ -115,6 +116,22 @@ body::before {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* The live chip carries network, block height and build state at once; on a
+   narrow window it has to truncate instead of pushing the page sideways. */
+.topbar-meta .chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A full CID is the evidence; on a narrow window wrap it instead of clipping. */
+.anchor-bad code {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* -------------------------------------------------------------------- hero */
@@ -1130,13 +1147,21 @@ button.ghost:hover {
   .shell {
     padding: 0 16px 56px;
   }
+  /* minmax(0, 1fr), not 1fr: a grid track with an `auto` minimum grows to the
+     content width, so one wide row would push the whole page sideways. */
   .workspace,
   .hero-stats,
-  .explain {
-    grid-template-columns: 1fr;
+  .explain,
+  .metric-row,
+  .panel,
+  .field {
+    min-width: 0;
   }
+  .workspace,
+  .hero-stats,
+  .explain,
   .metric-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .share-row {
     grid-template-columns: 56px minmax(0, 1fr) 80px;

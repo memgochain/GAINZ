@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VAULT_ID = process.env.NEAR_VAULT_ACCOUNT ?? "fenceline-vault-8t1bk.testnet";
-const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org";
+const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 
 /**
  * Candidate locations of the release wasm, relative to the Next.js app root

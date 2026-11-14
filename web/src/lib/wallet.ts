@@ -20,7 +20,7 @@ export const WALLET_NETWORKS: Record<WalletNetworkId, WalletNetwork> = {
   testnet: {
     id: "testnet",
     label: "testnet",
-    nodeUrl: "https://rpc.testnet.near.org",
+    nodeUrl: "https://rpc.testnet.fastnear.com",
     helperUrl: "https://helper.testnet.near.org",
     explorerUrl: "https://testnet.nearblocks.io",
     vault: NETWORK.vault,
@@ -28,7 +28,7 @@ export const WALLET_NETWORKS: Record<WalletNetworkId, WalletNetwork> = {
   mainnet: {
     id: "mainnet",
     label: "mainnet",
-    nodeUrl: "https://rpc.mainnet.near.org",
+    nodeUrl: "https://rpc.mainnet.fastnear.com",
     helperUrl: "https://helper.mainnet.near.org",
     explorerUrl: "https://nearblocks.io",
     vault: null,

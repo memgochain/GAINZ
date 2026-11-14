@@ -8,7 +8,7 @@
  */
 export const NETWORK = {
   networkId: "testnet",
-  rpcUrl: "https://rpc.testnet.near.org",
+  rpcUrl: "https://rpc.testnet.fastnear.com",
   vault: "fenceline-vault-8t1bk.testnet",
   agent: "fenceline-agent-8t1bk.testnet",
   apiProvider: "fenceline-api-8t1bk.testnet",

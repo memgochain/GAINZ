@@ -5,7 +5,7 @@ import { NETWORK, explorerAccount } from "@/lib/network";
 
 /**
  * Live chain badge for the top bar: real block height and RPC latency from
- * `https://rpc.testnet.near.org`, refreshed on click and every 30s, plus a
+ * `https://rpc.testnet.fastnear.com`, refreshed on click and every 30s, plus a
  * once-per-load check that the deployed contract matches this repo's wasm.
  */
 export default function NetworkStatus() {
