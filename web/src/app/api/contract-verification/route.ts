@@ -1,64 +1,77 @@
-import { NextResponse } from "next/server";
 import { createHash } from "crypto";
-import fs from "fs";
-import path from "path";
-
-const WASM_PATH =
-  "/workspace/chats/b3099967b06c4e3caede1df2/target/wasm32-unknown-unknown/release/guard_vault.wasm";
+import { readFileSync } from "fs";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function fetchCodeHash(rpcUrl: string, vaultId: string): Promise<string | null> {
+const VAULT_ID = process.env.NEAR_VAULT_ACCOUNT ?? "fenceline-vault-8t1bk.testnet";
+const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org";
+
+/**
+ * Candidate locations of the release wasm, relative to the Next.js app root
+ * (`web/`). `GUARD_VAULT_WASM` wins so a deploy can point at its own artifact.
+ */
+const WASM_CANDIDATES = [
+  process.env.GUARD_VAULT_WASM,
+  "../target/wasm32-unknown-unknown/release/guard_vault.wasm",
+  "target/wasm32-unknown-unknown/release/guard_vault.wasm",
+].filter((candidate): candidate is string => Boolean(candidate));
+
+const BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/** NEAR exposes `code_hash` as base58(sha256(wasm)), not as hex. */
+function base58(bytes: Uint8Array): string {
+  let value = 0n;
+  for (const byte of bytes) value = (value << 8n) | BigInt(byte);
+  let encoded = "";
+  while (value > 0n) {
+    encoded = BASE58[Number(value % 58n)] + encoded;
+    value /= 58n;
+  }
+  for (const byte of bytes) {
+    if (byte !== 0) break;
+    encoded = "1" + encoded;
+  }
+  return encoded || "1";
+}
+
+async function onChainCodeHash(): Promise<string | null> {
   try {
-    const res = await fetch(rpcUrl, {
+    const response = await fetch(RPC_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: "fenceline",
+        id: "gainz",
         method: "query",
-        params: {
-          request_type: "view_account",
-          finality: "final",
-          account_id: vaultId,
-        },
+        params: { request_type: "view_account", finality: "final", account_id: VAULT_ID },
       }),
     });
-    if (!res.ok) return null;
-    const data = (await res.json()) as any;
-    // code_hash is a field on the account response
-    return data.result?.code_hash ?? null;
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { result?: { code_hash?: string } };
+    return payload.result?.code_hash ?? null;
   } catch {
     return null;
   }
 }
 
-export async function GET() {
-  try {
-    const rpc = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org";
-    const vault = process.env.NEAR_VAULT_ACCOUNT ?? "fenceline-vault-8t1bk.testnet";
-
-    const onChainCodeHash = await fetchCodeHash(rpc, vault);
-
-    // Read local wasm and compute SHA256
-    let expectedHash = "";
+function localCodeHash(): string | null {
+  for (const candidate of WASM_CANDIDATES) {
     try {
-      const buf = fs.readFileSync(WASM_PATH);
-      expectedHash = createHash("sha256").update(buf).digest("hex");
+      return base58(createHash("sha256").update(readFileSync(candidate)).digest());
     } catch {
-      // wasm not present – we cannot verify
-      expectedHash = "";
+      // artifact not at this path — try the next candidate
     }
-
-    const verified = onChainCodeHash !== null && onChainCodeHash === expectedHash;
-
-    return NextResponse.json({
-      verified,
-      codeHash: onChainCodeHash ?? "—",
-      expectedHash: expectedHash ?? "—",
-    });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
   }
+  return null;
+}
+
+export async function GET() {
+  const [codeHash, expectedHash] = [await onChainCodeHash(), localCodeHash()];
+  return NextResponse.json({
+    verified: codeHash !== null && codeHash === expectedHash,
+    codeHash,
+    expectedHash,
+  });
 }

@@ -1,4 +1,4 @@
-//! Model Context Protocol server for NEAR Agent Guard.
+//! Model Context Protocol server for Guard AI NEAR ZK.
 //!
 //! The server owns the policy and the spending state. An agent connected over
 //! stdio (Claude Desktop, Claude Code, Cursor, or any MCP client) can only reach
@@ -395,7 +395,7 @@ pub fn tools() -> Value {
         },
         {
             "name": "near_run_range",
-            "description": "Run the Fenceline red-team range against the active policy: analytic loss bound, deterministic adversarial search, counterexamples with fixes, and a reproducible report hash.",
+            "description": "Run the GAINZ red-team range against the active policy: analytic loss bound, deterministic adversarial search, counterexamples with fixes, and a reproducible report hash.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

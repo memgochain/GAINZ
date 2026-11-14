@@ -3,7 +3,7 @@ name: near-agent-guard
 description: Enforce spending limits, recipient allowlists and Noir ZK policy checks for NEAR transactions via GuardVault, and verify that a policy's worst-case loss is actually bounded before an agent is funded.
 ---
 
-# NEAR Agent Guard
+# Guard AI NEAR ZK
 
 Use this skill whenever the user or an agent needs to move NEAR, pay for an API,
 or execute a swap / cross-chain intent from an autonomous agent wallet.

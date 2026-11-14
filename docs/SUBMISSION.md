@@ -1,6 +1,6 @@
 # NEAR HACKATHON 2026 — submission pack
 
-**Project:** Fenceline — NEAR Agent Guard
+**Project:** GAINZ — Guard AI NEAR ZK
 **Tracks:** `security` (lead), `agents`, `business`
 **Repo:** <https://github.com/memgochain/near-agent-guard>
 **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
@@ -19,7 +19,7 @@ can lose — then anchors that claim onchain.
 ## 2. What did you build? (form field, ~1 800 characters)
 
 ```
-Fenceline — NEAR Agent Guard is a security layer for AI agents that hold NEAR.
+GAINZ — Guard AI NEAR ZK is a security layer for AI agents that hold NEAR.
 
 THE PROBLEM
 Giving an LLM a wallet means one hallucination or prompt injection can drain it. The industry's
@@ -34,7 +34,7 @@ allowlist, per-transaction cap, slippage tolerance, 24h window cap, hourly rate 
 holds only a function-call access key scoped to this contract, cannot edit the policy, and cannot
 anchor reports. Approved actions are logged with an IPLD CIDv1 and the Noir proof hash.
 
-2. Fenceline range (Rust): an analytic worst-case loss bound (closed form, integer micro-NEAR) plus
+2. GAINZ range (Rust): an analytic worst-case loss bound (closed form, integer micro-NEAR) plus
 a deterministic adversarial search with six strategies — split sweeps, day-boundary double spends,
 maximum-slippage swaps, allowlist fanout, injection probes, mixed sequences. It only proposes
 actions the policy allows, so anything it finds is a policy bug. Output: declared cap vs analytic
@@ -120,11 +120,11 @@ TypeScript on Vercel, IPLD CIDv1, MCP (JSON-RPC over stdio), optional Cerebras i
 ## 9. X / Twitter post (copy, replace the placeholders)
 
 ```
-Just built Fenceline at @NEARProtocol #NEARHackathon 🛡️🤖
+Just built GAINZ at @NEARProtocol #NEARHackathon 🛡️🤖
 
 Everyone is shipping AI agents with wallets. Almost nobody can tell you the worst case.
 
-Fenceline attacks your agent's spending policy, finds the sequence of ALLOWED actions that breaks
+GAINZ attacks your agent's spending policy, finds the sequence of ALLOWED actions that breaks
 it, and reports the maximum you can lose.
 
 Demo: a "10 NEAR/day" policy that actually loses 20 NEAR in 24h — because its daily budget resets

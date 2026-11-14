@@ -18,13 +18,13 @@ const BANNER: &str = r#"
 "#;
 
 fn main_help() -> &'static str {
-    "near_guard_mcp — MCP policy firewall for NEAR agent wallets
+    "GAINZ — Guard AI NEAR ZK · near_guard_mcp MCP policy firewall for NEAR agent wallets
 
 USAGE:
     near_guard_mcp [--demo] [--policy <path>]
 
 FLAGS:
-    --demo             Run the end-to-end CLI demonstration (Cerebras optional)
+    --demo             Run the end-to-end CLI demonstration (NEAR AI / Cerebras optional)
     --policy <path>    Policy file to enforce (default: policy/policy.json)
     --help, -h         Show this help
     --version          Print the version
@@ -100,96 +100,69 @@ fn verdict_line(approved: bool, action: impl std::fmt::Display) {
     }
 }
 
-/// Optional Cerebras inference for the "agent intent" line. Never required: the
-/// demo must work on a laptop with no network at all.
-async fn cerebras_intent(prompt: &str) -> Option<String> {
-    let key = std::env::var("CEREBRAS_API_KEY").ok()?;
-    if key.trim().is_empty() {
-        return None;
-    }
+/// One-shot chat completion against an OpenAI-compatible endpoint. Returns the
+/// assistant text, or `None` if the request or the response shape fails.
+async fn chat_completion(
+    endpoint: &str,
+    model: &str,
+    api_key: Option<&str>,
+    prompt: &str,
+) -> Option<String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
         .ok()?;
-    let body = serde_json::json!({
-        "model": "llama3.1-8b",
+    let mut request = client.post(endpoint).json(&serde_json::json!({
+        "model": model,
         "messages": [{ "role": "user", "content": prompt }],
         "max_tokens": 80
-    });
-    let response = client
-        .post("https://api.cerebras.ai/v1/chat/completions")
-        .header("Authorization", format!("Bearer {key}"))
-        .json(&body)
-        .send()
-        .await
-        .ok()?;
-    let parsed: serde_json::Value = response.json().await.ok()?;
+    }));
+    if let Some(key) = api_key {
+        request = request.bearer_auth(key);
+    }
+    let parsed: serde_json::Value = request.send().await.ok()?.json().await.ok()?;
     parsed["choices"][0]["message"]["content"]
         .as_str()
-        .map(|s| s.trim().to_string())
+        .map(|text| text.trim().to_string())
 }
 
-/// Optional NEAR AI Cloud inference for the "agent intent" line.
-async fn near_ai_intent(prompt: &str) -> Option<String> {
-    // 1. Try NEAR AI Cloud key first
-    let near_ai_key = std::env::var("NEAR_AI_API_KEY").ok();
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .expect("reqwest client build failed");
-    let body = serde_json::json!({
-        "model": "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
-        "messages": [{ "role": "user", "content": prompt }],
-        "max_tokens": 80
-    });
-    match client.post("https://near.ai/v1/chat/completions")
-        .json(&body)
-        .send()
+fn env_key(name: &str) -> Option<String> {
+    std::env::var(name).ok().filter(|value| !value.trim().is_empty())
+}
+
+/// The demo's agent-intent line: NEAR AI Cloud first (`NEAR_AI_API_KEY`), then
+/// Cerebras (`CEREBRAS_API_KEY`), then a deterministic offline line. Neither key
+/// is required: the demo must work on a laptop with no network at all.
+async fn agent_intent(prompt: &str) -> (&'static str, String) {
+    if let Some(key) = env_key("NEAR_AI_API_KEY") {
+        if let Some(text) = chat_completion(
+            "https://near.ai/v1/chat/completions",
+            "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
+            Some(&key),
+            prompt,
+        )
         .await
-    {
-        Ok(resp) => {
-            let parsed: serde_json::Value = resp.json().await.ok()?;
-            return parsed["choices"][0]["message"]["content"]
-                .as_str()
-                .map(|s| s.trim().to_string());
-        }
-        Err(_) => {} // fall through to Cerebras below
-    }
-
-    // 2. Fall back to Cerebras key
-    let cerebras_key = std::env::var("CEREBRAS_API_KEY").ok();
-    if let Some(key) = &cerebras_key {
-        if !key.trim().is_empty() {
-            let client2 = reqwest::Client::builder()
-                .timeout(Duration::from_secs(15))
-                .build()
-                .expect("reqwest client build failed");
-            let body = serde_json::json!({
-                "model": "llama3.1-8b",
-                "messages": [{ "role": "user", "content": prompt }],
-                "max_tokens": 80
-            });
-            match client2.post("https://api.cerebras.ai/v1/chat/completions")
-                .header("Authorization", format!("Bearer {key}"))
-                .json(&body)
-                .send()
-                .await
-            {
-                Ok(resp) => {
-                    let parsed: serde_json::Value = resp.json().await.ok()?;
-                    return parsed["choices"][0]["message"]["content"]
-                        .as_str()
-                        .map(|s| s.trim().to_string());
-                }
-                Err(_) => {} // fall through to local simulation below
-            }
+        {
+            return ("NEAR AI agent intent", text);
         }
     }
-
-    // 3. Local simulation - no API key needed
-    Some(format!("[Local simulation] {prompt}"))
+    if let Some(key) = env_key("CEREBRAS_API_KEY") {
+        if let Some(text) = chat_completion(
+            "https://api.cerebras.ai/v1/chat/completions",
+            "llama3.1-8b",
+            Some(&key),
+            prompt,
+        )
+        .await
+        {
+            return ("Cerebras agent intent", text);
+        }
+    }
+    (
+        "offline agent intent",
+        "I need to pay api-provider.testnet 1.5 NEAR for market data.".to_string(),
+    )
 }
-
 
 async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     let now = now_ms();
@@ -197,7 +170,7 @@ async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     let bound = analytic_bound(&compiled);
 
     println!("{BANNER}");
-    println!("  NEAR Agent Guard / Fenceline — programmable security for AI agent wallets");
+    println!("  GAINZ — Guard AI NEAR ZK · programmable security for NEAR agent wallets");
     println!("  Policy: {policy_path}");
     rule();
     println!("POLICY");
@@ -218,16 +191,11 @@ async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     kv("worst case at risk", format!("{} NEAR", format_near(bound.total_value_at_risk_micro)));
     println!();
 
-    match near_ai_intent(
+    let (intent_source, intent) = agent_intent(
         "You are an autonomous AI agent with a NEAR wallet. In one short sentence, request 1.5 NEAR to pay api-provider.testnet for market data.",
     )
-    .await
-    {
-        Some(text) => println!("[NEAR AI agent intent] {text}\n"),
-        None => println!(
-            "[Agent intent] I need to pay api-provider.testnet 1.5 NEAR for market data.\n"
-        ),
-    }
+    .await;
+    println!("[{intent_source}] {intent}\n");
 
     let mut vault = GuardedVault::new(policy.clone())?;
 
@@ -275,7 +243,7 @@ async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     println!();
 
     rule();
-    println!("FENCELINE RANGE — is the authored policy actually bounded?");
+    println!("GAINZ RANGE — is the authored policy actually bounded?");
     let config = FuzzConfig::default();
     let report = near_guard_core::report::build_report(&compiled, &config, now);
     kv("sequences", report.range.sequences_run);
@@ -304,7 +272,7 @@ async fn run_demo(policy: Policy, policy_path: &str) -> Result<(), String> {
     println!();
 
     rule();
-    println!("FENCELINE RANGE — same policy with a rolling 24h window");
+    println!("GAINZ RANGE — same policy with a rolling 24h window");
     let mut hardened_policy = policy.clone();
     hardened_policy.window_model = near_guard_core::WindowModel::Rolling;
     let hardened = hardened_policy.compile()?;

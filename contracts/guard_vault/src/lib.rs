@@ -16,7 +16,7 @@
 //!
 //! Nothing is written to state until every check has passed.
 //!
-//! The owner can additionally anchor a **Fenceline loss-bound report** hash, so
+//! The owner can additionally anchor a **GAINZ loss-bound report** hash, so
 //! the claim "this policy bounds the loss to X" is timestamped on NEAR and can
 //! be re-verified by anyone holding the report.
 //!
@@ -45,7 +45,7 @@ pub struct AuditLog {
     pub policy_commitment: String,
 }
 
-/// Anchored Fenceline report: a timestamped claim about the policy's worst case.
+/// Anchored GAINZ report: a timestamped claim about the policy's worst case.
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
 pub struct ReportAnchor {
@@ -251,7 +251,7 @@ impl GuardVault {
 
     // ------------------------------------------------------------- report anchor
 
-    /// Timestamp a Fenceline loss-bound report hash onchain.
+    /// Timestamp a GAINZ loss-bound report hash onchain.
     ///
     /// The contract cannot re-run the range, so it anchors the claim and its
     /// inputs. Anyone with the report file can recompute the hash and compare.

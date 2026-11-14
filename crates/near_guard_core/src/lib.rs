@@ -1,6 +1,6 @@
 //! # near_guard_core
 //!
-//! The shared brain of **NEAR Agent Guard / Fenceline**.
+//! The shared brain of **GAINZ — Guard AI NEAR ZK**.
 //!
 //! Two responsibilities that must stay in lock-step:
 //!

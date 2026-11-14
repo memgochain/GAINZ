@@ -5,7 +5,7 @@
 //!     cargo run -q -p near_guard_core --example vectors
 
 use near_guard_core::{
-    analytic_bound, audit_cid, format_near, micro_from_near, policy_commitment,
+    analytic_bound, format_near, micro_from_near, policy_commitment,
     report::build_report, Action, FuzzConfig, Policy, VaultState,
 };
 use serde_json::json;

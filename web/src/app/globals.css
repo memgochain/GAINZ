@@ -1182,6 +1182,15 @@ button.ghost:hover {
 .anchor-ok {
   color: var(--lime);
 }
+.anchor-bad {
+  color: var(--red);
+}
+.build-ok {
+  color: var(--lime);
+}
+.build-unknown {
+  color: var(--amber);
+}
 .dot {
   width: 6px;
   height: 6px;

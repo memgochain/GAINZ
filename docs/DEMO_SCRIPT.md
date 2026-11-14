@@ -24,7 +24,7 @@ Terminal: font size ~16, dark theme, window 110x30 minimum, no other tabs.
 |---|---|---|---|
 | 0:00–0:08 | Browser, hero | Scroll to the top, cursor still | "Every AI agent with a wallet ships a spending policy. Nobody can tell you the worst case." |
 | 0:08–0:20 | Browser, policy panel | Drag the daily cap slider from 10 to 30, then back | "This is a 10 NEAR daily cap, a 5 NEAR per-transaction cap, and a 4-per-hour limit. It looks safe." |
-| 0:20–0:38 | Browser, range panel | Click **Run range** | "Fenceline attacks the policy using only actions the policy allows: split sweeps, day-boundary flushes, maximum slippage swaps." |
+| 0:20–0:38 | Browser, range panel | Click **Run range** | "GAINZ attacks the policy using only actions the policy allows: split sweeps, day-boundary flushes, maximum slippage swaps." |
 | 0:38–0:52 | Browser, counterexample | Hover the counterexample rows | "It found one. Ten NEAR declared, eighteen NEAR observed — because a calendar-day budget can be spent twice inside a 24-hour window." |
 | 0:52–1:04 | Browser, preset switch | Click **Rolling window**, let the range re-run | "Same limits, rolling 24h window. Observed loss drops back to ten NEAR. Verdict: bounded." |
 | 1:04–1:16 | Browser, console | Click **Pay 1.5 NEAR invoice**, then **Prompt injection** | "The same nine rules enforce this onchain. The invoice is approved with an IPLD audit CID. The injection is refused." |
@@ -32,7 +32,7 @@ Terminal: font size ~16, dark theme, window 110x30 minimum, no other tabs.
 
 ## Terminal segment (paste-ready, pre-recorded output)
 
-Use the section of `--demo` from `FENCELINE RANGE — is the authored policy actually bounded?` to the
+Use the section of `--demo` from `GAINZ RANGE — is the authored policy actually bounded?` to the
 end. It contains: declared cap, analytic bound, observed loss, the counterexample with steps, the
 rolling-window fix and the `near call ... anchor_report` line — exactly what a judge needs to see.
 
@@ -45,15 +45,15 @@ rolling-window fix and the `near call ... anchor_report` line — exactly what a
 
 ## Upload
 
-Title: `Fenceline — proving your AI agent's spending policy actually bounds the loss (NEAR Hackathon 2026)`
+Title: `GAINZ — proving your AI agent's spending policy actually bounds the loss (NEAR Hackathon 2026)`
 
 Description:
 
 ```
-Fenceline / NEAR Agent Guard — security track, NEAR HACKATHON 2026.
+GAINZ — Guard AI NEAR ZK · security track, NEAR HACKATHON 2026.
 
 A "10 NEAR per day" policy loses 20 NEAR in one 24h window, because its budget resets at midnight.
-Fenceline finds that sequence, replays it, and gives the owner a fix plus a report hash to anchor
+GAINZ finds that sequence, replays it, and gives the owner a fix plus a report hash to anchor
 on NEAR.
 
 Repo: https://github.com/memgochain/near-agent-guard

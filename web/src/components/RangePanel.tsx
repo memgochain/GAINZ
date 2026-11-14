@@ -3,7 +3,7 @@
 import { useState } from "react";
 import RangeChart from "@/components/RangeChart";
 import { formatNear } from "@/lib/amount";
-import { PRESETS } from "@/lib/presets";
+import { DEFAULT_CONFIG, PRESETS } from "@/lib/presets";
 import { ANCHORED_REPORTS, explorerTx } from "@/lib/network";
 import type { RangeReport } from "@/lib/types";
 
@@ -62,14 +62,14 @@ function Share({
 
 export default function RangePanel({ report, running }: Props) {
   const [copied, setCopied] = useState(false);
-  const [swapped, setSwapped] = useState(false);
-  const [mismatch, setMismatch] = useState(false);
+  const [swappedReport, setSwappedReport] = useState<RangeReport | null>(null);
+  const [swapFailed, setSwapFailed] = useState(false);
 
   if (!report) {
     return (
       <section className="panel panel-range" aria-label="Range">
         <header className="panel-head">
-          <h2>Fenceline range</h2>
+          <h2>GAINZ range</h2>
           <span className="tag">idle</span>
         </header>
         <div className="skeleton">
@@ -79,15 +79,19 @@ export default function RangePanel({ report, running }: Props) {
     );
   }
 
-  const breach = report.range.observed_max_loss_micro > report.declared_daily_cap_micro;
-  const counterexample = report.range.counterexamples[0];
+  // After a swap the panel shows the new report; the anchor lookup below then
+  // fails, which is exactly the evidence that the policy change is visible.
+  const shown = swappedReport ?? report;
+  const breach = shown.range.observed_max_loss_micro > shown.declared_daily_cap_micro;
+  const counterexample = shown.range.counterexamples[0];
   const anchor = Object.values(ANCHORED_REPORTS).find(
-    (entry) => entry.reportHash === report.report_hash,
+    (entry) => entry.reportHash === shown.report_hash,
   );
+  const swapUnanchored = swappedReport !== null && !anchor;
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(report.report_hash);
+      await navigator.clipboard.writeText(shown.report_hash);
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -96,52 +100,47 @@ export default function RangePanel({ report, running }: Props) {
   };
 
   const swapPolicy = async () => {
-    setSwapped(true);
-    const swappedPolicy = {
-      ...PRESETS.weak.policy,
-      window_model: "rolling",
-    };
-    const res = await fetch("/api/range", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ policy: swappedPolicy, config: { seed: 1337, sequences: 120, horizon_hours: 48, steps_per_sequence: 48 } }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      const originalAnchoredCid = ANCHORED_REPORTS.weak.reportHash;
-      const mismatched = data.report.report_hash !== originalAnchoredCid;
-      setMismatch(mismatched);
-      setSwapped(true);
-    } else {
-      setSwapped(false);
+    setSwapFailed(false);
+    try {
+      const response = await fetch("/api/range", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // Same limits, same seed — only the window model changes.
+        body: JSON.stringify({ policy: PRESETS.hardened.policy, config: DEFAULT_CONFIG }),
+      });
+      if (!response.ok) throw new Error("range request failed");
+      const payload = await response.json();
+      setSwappedReport(payload.report as RangeReport);
+    } catch {
+      setSwapFailed(true);
     }
   };
 
   return (
     <section className="panel panel-range" aria-label="Range">
       <header className="panel-head">
-        <h2>Fenceline range</h2>
-        <span className={`tag ${breach ? "tag-bad" : "tag-good"}`}>{report.verdict}</span>
+        <h2>GAINZ range</h2>
+        <span className={`tag ${breach ? "tag-bad" : "tag-good"}`}>{shown.verdict}</span>
       </header>
 
       <div className="metric-row">
         <Metric
           label="Declared cap"
-          value={formatNear(report.declared_daily_cap_micro)}
+          value={formatNear(shown.declared_daily_cap_micro)}
           unit="NEAR"
           sub="what the owner wrote in policy.json"
           tone="muted"
         />
         <Metric
           label="Observed max loss"
-          value={formatNear(report.range.observed_max_loss_micro)}
+          value={formatNear(shown.range.observed_max_loss_micro)}
           unit="NEAR"
           sub="best legal sequence the range found, per 24h"
           tone={breach ? "bad" : "good"}
         />
         <Metric
           label="Analytic bound"
-          value={formatNear(report.bound.total_value_at_risk_micro)}
+          value={formatNear(shown.bound.total_value_at_risk_micro)}
           unit="NEAR"
           sub="worst case from the policy, incl. slippage"
           tone="good"
@@ -151,32 +150,32 @@ export default function RangePanel({ report, running }: Props) {
       <div className="share-block">
         <Share
           label="declared"
-          micro={report.declared_daily_cap_micro}
-          total={report.bound.total_value_at_risk_micro}
+          micro={shown.declared_daily_cap_micro}
+          total={shown.bound.total_value_at_risk_micro}
           tone="muted"
         />
         <Share
           label="observed"
-          micro={report.range.observed_max_loss_micro}
-          total={report.bound.total_value_at_risk_micro}
+          micro={shown.range.observed_max_loss_micro}
+          total={shown.bound.total_value_at_risk_micro}
           tone={breach ? "bad" : "good"}
         />
         <Share
           label="bound"
-          micro={report.bound.total_value_at_risk_micro}
-          total={report.bound.total_value_at_risk_micro}
+          micro={shown.bound.total_value_at_risk_micro}
+          total={shown.bound.total_value_at_risk_micro}
           tone="good"
         />
       </div>
 
       <p className={`verdict-detail ${breach ? "verdict-detail-bad" : ""}`}>
-        {report.verdict_detail}
+        {shown.verdict_detail}
       </p>
 
       <RangeChart
-        timeline={report.range.loss_timeline}
-        declaredMicro={report.declared_daily_cap_micro}
-        observedMicro={report.range.observed_max_loss_micro}
+        timeline={shown.range.loss_timeline}
+        declaredMicro={shown.declared_daily_cap_micro}
+        observedMicro={shown.range.observed_max_loss_micro}
       />
 
       {counterexample ? (
@@ -218,9 +217,9 @@ export default function RangePanel({ report, running }: Props) {
             <h3>Every legal sequence stayed inside the declared cap</h3>
           </header>
           <p className="cex-text">
-            {report.range.sequences_run} sequences and {report.range.actions_simulated} simulated
-            actions produced {report.range.approved} approvals and {report.range.blocked} blocks.
-            Worst observed 24h loss: {formatNear(report.range.observed_max_loss_micro)} NEAR.
+            {shown.range.sequences_run} sequences and {shown.range.actions_simulated} simulated
+            actions produced {shown.range.approved} approvals and {shown.range.blocked} blocks.
+            Worst observed 24h loss: {formatNear(shown.range.observed_max_loss_micro)} NEAR.
           </p>
         </article>
       )}
@@ -228,19 +227,29 @@ export default function RangePanel({ report, running }: Props) {
       <div className="report-foot">
         <div className="hash-row">
           <span className="field-label">Report CID</span>
-          <code>{report.report_hash}</code>
+          <code>{shown.report_hash}</code>
           <button type="button" className="ghost" onClick={copy}>
             {copied ? "copied" : "copy"}
           </button>
         </div>
-        {(!swapped) && (
-          <button type="button" className="ghost" onClick={swapPolicy}>
-            Swap window model
-          </button>
-        )}
+
+        <button
+          type="button"
+          className="ghost"
+          onClick={swappedReport ? () => setSwappedReport(null) : swapPolicy}
+        >
+          {swappedReport ? "Restore original report" : "Swap window model"}
+        </button>
+        {swapFailed ? (
+          <p className="anchor-hint anchor-bad">Could not run the swapped policy. Try again.</p>
+        ) : null}
+
         {anchor ? (
           <p className="anchor-hint anchor-ok">
-            <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}<a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">view the anchor transaction ↗</a>
+            <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}
+            <a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">
+              view the anchor transaction ↗
+            </a>
           </p>
         ) : (
           <p className="anchor-hint">
@@ -249,15 +258,24 @@ export default function RangePanel({ report, running }: Props) {
             browser.
           </p>
         )}
-        {mismatch && (
-          <p style={{ color: "var(--red)" }}>⚠️ Anchor mismatch: the report CID changed after swapping the window model. The original anchored transaction is <a href={explorerTx(ANCHORED_REPORTS.weak.tx)}>here</a>.</p>
-        )}
+
+        {swapUnanchored ? (
+          <p className="anchor-hint anchor-bad">
+            <span className="dot dot-bad" aria-hidden /> Anchor mismatch: after swapping the window
+            model this policy hashes to <code>{shown.report_hash}</code>, which is not the CID
+            anchored on NEAR testnet. The original anchor is{" "}
+            <a href={explorerTx(ANCHORED_REPORTS.weak.tx)} target="_blank" rel="noreferrer">
+              still on chain ↗
+            </a>
+          </p>
+        ) : null}
+
         <div className="stat-chips">
-          <span className="chip chip-quiet">{report.range.sequences_run} sequences</span>
-          <span className="chip chip-quiet">{report.range.actions_simulated} actions</span>
-          <span className="chip chip-quiet">{report.range.approved} approved</span>
-          <span className="chip chip-quiet">{report.range.blocked} blocked</span>
-          {Object.entries(report.range.rules_triggered).map(([rule, count]) => (
+          <span className="chip chip-quiet">{shown.range.sequences_run} sequences</span>
+          <span className="chip chip-quiet">{shown.range.actions_simulated} actions</span>
+          <span className="chip chip-quiet">{shown.range.approved} approved</span>
+          <span className="chip chip-quiet">{shown.range.blocked} blocked</span>
+          {Object.entries(shown.range.rules_triggered).map(([rule, count]) => (
             <span className="chip chip-rule" key={rule}>
               {rule} × {count}
             </span>

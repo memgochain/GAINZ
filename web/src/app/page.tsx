@@ -153,8 +153,8 @@ export default function Home() {
               <path d="M14 4h6v6" />
             </svg>
           </span>
-          <span className="brand-name">FENCELINE</span>
-          <span className="brand-sub">NEAR Agent Guard</span>
+          <span className="brand-name">GAINZ</span>
+          <span className="brand-sub">Guard AI NEAR ZK</span>
         </div>
         <div className="topbar-meta">
           <a
@@ -186,7 +186,7 @@ export default function Home() {
           <span className="hl"> not a loss bound.</span>
         </h1>
         <p>
-          Fenceline attacks the policy an AI agent is allowed to follow, finds the sequence of legal
+          GAINZ attacks the policy an AI agent is allowed to follow, finds the sequence of legal
           actions that breaks it, and puts a number on the worst case. Enforcement lives in the
           onchain <code>GuardVault</code>; the evidence lives in a reproducible report you can anchor
           on NEAR.

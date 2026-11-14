@@ -172,7 +172,7 @@ async fn guard_vault_enforces_policy_and_anchors_reports() -> Result<(), Box<dyn
     assert_eq!(config["window_model"], "rolling");
     assert_eq!(config["remaining_daily"], yocto(3));
 
-    // --- Scenario 6: anchor a Fenceline report and read it back -------------
+    // --- Scenario 6: anchor a GAINZ report and read it back -------------
     let report_hash = ipld_cid("report");
     let anchor = owner
         .call(contract.id(), "anchor_report")

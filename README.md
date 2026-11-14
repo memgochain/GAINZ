@@ -4,8 +4,8 @@
 
 Built for **NEAR HACKATHON 2026** — tracks: `security` (lead), `agents`, `business`.
 
-- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app> (GAINZ edition)
-- **Repository:** <https://github.com/memgochain/near-agent-guard> (GAINZ edition)
+- **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
+- **Repository:** <https://github.com/memgochain/near-agent-guard>
 - **Enforcement:** `GuardVault`, a Rust `near-sdk` contract with hard per-tx / 24h / allowlist / slippage limits
 - **Verification:** an analytic loss bound plus a deterministic red-team range that finds the *legal* sequence which breaks the policy
 - **Agent surface:** a Rust MCP server (Claude Desktop / Claude Code / Cursor) that routes every payment through the vault
@@ -85,10 +85,11 @@ not depend on it.
 ## 3. Architecture
 
 ```
-[ AI agent: Claude / Cursor / Cerebras ]
+[ AI agent: Claude / Cursor / NEAR AI Cloud ]
                 │  Model Context Protocol (stdio)
                 ▼
 [ GAINZ MCP ]  ── policy verdicts, IPLD CIDs, ZK proof hashes
+                │  intent line: NEAR AI Cloud → Cerebras → offline
                 │  function-call access key (scoped, no full-access key)
                 ▼
 [ GuardVault (near-sdk) ]  ── per-tx cap, 24h window, allowlist, asset list,
@@ -96,10 +97,10 @@ not depend on it.
                 ▼
         NEAR account / recipient
 
-        ┌───────────── verification plane (on-chain, reproducible) ─────────────┐
-        │ GAINZ core:  policy → analytic bound → red-team range → report CID (verified on-chain) │
-        │ web MVP (Next.js on Vercel): same engine, byte-identical hashes          │
-        │ Noir circuit: proves compliance without revealing the limit             │
+        ┌───────────── verification plane (off-chain, reproducible) ─────────────┐
+        │ GAINZ core:  policy → analytic bound → red-team range → report CID     │
+        │ web MVP (Next.js on Vercel): same engine, byte-identical hashes        │
+        │ Noir circuit: proves compliance without revealing the limit            │
         └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,9 +110,9 @@ not depend on it.
 |---|---|
 | `contracts/guard_vault/` | `GuardVault` contract + sandbox integration test |
 | `crates/near_guard_core/` | policy compiler, enforcement engine, loss bound, range, CID/report |
-| `crates/near_guard_mcp/` | MCP stdio server, CLI `--demo`, optional Cerebras intent line |
+| `crates/near_guard_mcp/` | MCP stdio server, CLI `--demo`, optional NEAR AI Cloud / Cerebras intent line |
 | `circuits/policy_check/` | Noir circuit: private daily-limit compliance proof |
-| `skills/near-agent-guard/` (GAINZ) | agent skill instructions for MCP clients |
+| `skills/near-agent-guard/` | agent skill instructions for MCP clients |
 | `policy/*.json` | the authored policies used by the demo and the fixtures |
 | `fixtures/policy_vectors.json` | shared vectors asserted by **both** Rust and TypeScript |
 | `web/` | Next.js MVP deployed to Vercel (range UI + enforcement console) |
@@ -234,10 +235,10 @@ meaningful.
 ```json
 {
   "mcpServers": {
-    "near-agent-guard": { // GAINZ
+    "near-agent-guard": {
       "command": "cargo",
       "args": ["run", "--quiet", "-p", "near_guard_mcp", "--", "--policy", "/absolute/path/policy/policy.json"],
-      "env": { "CEREBRAS_API_KEY": "optional" }
+      "env": { "NEAR_AI_API_KEY": "optional", "CEREBRAS_API_KEY": "optional" }
     }
   }
 }
@@ -247,8 +248,10 @@ Tools: `near_safe_transfer`, `near_policy_status`, `near_run_range`, `near_audit
 `near_report_anchor_payload`. A refused payment returns `isError: true` with the rule code, so a
 well-behaved agent stops instead of retrying with a split amount.
 
-With `CEREBRAS_API_KEY` set, `--demo` prints a live agent intent; without it the demo runs offline
-with a deterministic fallback. The project never needs a network connection to be judged.
+`--demo` prints a live agent intent from **NEAR AI Cloud** (`NEAR_AI_API_KEY`, model
+`fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct`), falling back to `CEREBRAS_API_KEY`
+and finally to a deterministic offline line. Neither key is required: the project never needs a
+network connection to be judged.
 
 ---
 
@@ -261,6 +264,7 @@ with a deterministic fallback. The project never needs a network connection to b
 | `POST /api/range` | compile a policy, compute the bound, run the range, return the report |
 | `POST /api/transfer` | evaluate one action, return the verdict + audit CID + next state |
 | `GET /api/network` | read the live `GuardVault` on NEAR testnet: `status`, `view_account`, `get_config`, `get_report`, `get_recent_audit_logs` |
+| `GET /api/contract-verification` | compare the deployed `code_hash` with base58(sha256(release wasm)) and report `verified build` / `unknown build` |
 
 The page exposes the policy sliders, the declared/observed/bound comparison, the loss timeline, the
 counterexample with its fix, the enforcement console and the report CID to anchor.
