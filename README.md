@@ -140,17 +140,24 @@ cargo run -q -p near_guard_core --example vectors
 The agent holds only a **function-call access key** scoped to this contract. It cannot transfer
 directly, cannot edit limits, cannot add allowlist entries, and cannot anchor reports.
 
-| # | Rule | Code |
-|---|---|---|
-| 1 | amount must be positive | `non_positive_amount` |
-| 2 | recipient must not be the vault or the agent itself | `self_transfer` |
-| 3 | a non-empty Noir proof must be attached | `missing_zk_proof` |
-| 4 | asset must be allowed (both sides of a swap) | `asset_not_allowed` |
-| 5 | recipient must be allowlisted | `recipient_not_whitelisted` |
-| 6 | amount ≤ per-transaction cap | `per_tx_cap` |
-| 7 | swap slippage ≤ policy tolerance | `slippage_exceeded` |
-| 8 | window spend + amount ≤ daily cap | `daily_cap` |
-| 9 | approved actions per rolling hour ≤ limit | `rate_limit` |
+| # | Rule | Code | Enforced by |
+|---|---|---|---|
+| 1 | amount must be positive | `non_positive_amount` | contract |
+| 2 | recipient must not be the vault or the agent itself | `self_transfer` | engine |
+| 3 | a non-empty Noir proof must be attached | `missing_zk_proof` | contract |
+| 4 | asset must be allowed (both sides of a swap) | `asset_not_allowed` | engine |
+| 5 | recipient must be allowlisted | `recipient_not_whitelisted` | contract |
+| 6 | amount ≤ per-transaction cap | `per_tx_cap` | contract |
+| 7 | swap slippage ≤ policy tolerance | `slippage_exceeded` | engine |
+| 8 | window spend + amount ≤ daily cap | `daily_cap` | contract |
+| 9 | approved actions per rolling hour ≤ limit | `rate_limit` | engine |
+
+Rules 1, 3, 5, 6 and 8 are hard onchain assertions, together with caller authentication
+(`predecessor == agent_id`) and the CID format check. Rules 2, 4, 7 and 9 need context the vault does
+not see — the swap quote, the asset list, the timestamp density of a burst — so the engine that
+prepares and signs the call enforces them, and the range assumes exactly that split when it computes
+the bound. Nothing is enforced only in the UI: the MCP server refuses the same actions with the same
+rule codes.
 
 Approved actions are logged with an **IPLD CID** and the **Noir proof hash**; the owner can also
 anchor a **report hash** with `anchor_report(report_hash, policy_commitment, declared_cap,
@@ -248,9 +255,28 @@ with a deterministic fallback. The project never needs a network connection to b
 |---|---|
 | `POST /api/range` | compile a policy, compute the bound, run the range, return the report |
 | `POST /api/transfer` | evaluate one action, return the verdict + audit CID + next state |
+| `GET /api/network` | read the live `GuardVault` on NEAR testnet: `status`, `view_account`, `get_config`, `get_report`, `get_recent_audit_logs` |
 
 The page exposes the policy sliders, the declared/observed/bound comparison, the loss timeline, the
 counterexample with its fix, the enforcement console and the report CID to anchor.
+
+### 7.1 The live deployment
+
+`GuardVault` is deployed and anchored on NEAR testnet, and the "Live on NEAR testnet" panel reads it
+at request time — no fixtures, no cached snapshot:
+
+| What | Where |
+|---|---|
+| Contract | [`fenceline-vault-8t1bk.testnet`](https://testnet.nearblocks.io/address/fenceline-vault-8t1bk.testnet) (5 NEAR/tx, 10 NEAR per rolling 24h, API provider allowlisted) |
+| Agent account | `fenceline-agent-8t1bk.testnet` (holds no key in this deployment) |
+| Deploy tx | [`F1oMn9bNWNc74TwQRTr85seZozkeCbdtU253ztN9opbQ`](https://testnet.nearblocks.io/txns/F1oMn9bNWNc74TwQRTr85seZozkeCbdtU253ztN9opbQ) |
+| Anchored weak report | `bafyreiam7if3ugmzvk5hz4ig73gt3akp6jtkb7wvzbswod3jm5n2ejkhwy` × [`J3CBhfRuZ9jZUPXN6xvdbESH5QxLBkaAFv5ZaGboiwPA`](https://testnet.nearblocks.io/txns/J3CBhfRuZ9jZUPXN6xvdbESH5QxLBkaAFv5ZaGboiwPA) |
+| Anchored hardened report | `bafyreickps35otu3w6dcegoi5md3zinfvdhxj4v4aooqhbjxfpf67tddcy` × [`DSaD1sNiDPJntqeVJ4iMDvYm2WBJ4nBL2YWm9xoXG7M1`](https://testnet.nearblocks.io/txns/DSaD1sNiDPJntqeVJ4iMDvYm2WBJ4nBL2YWm9xoXG7M1) |
+
+The panel recomputes its own report with the default seed (1337) and 120 sequences and compares the
+CID against `get_report` on chain: switch between the two presets and the anchor line follows, so a
+swapped or re-seeded report is visibly unanchored. The owner and agent keys are not shipped with the
+site — writing to the vault is a deliberate, keyed operation (`anchor_report`, `execute_agent_transfer`).
 
 ```bash
 cd web

@@ -4,6 +4,7 @@
 **Tracks:** `security` (lead), `agents`, `business`
 **Repo:** <https://github.com/memgochain/near-agent-guard>
 **Live MVP:** <https://fenceline-near-agent-guard.vercel.app>
+**Live contract (NEAR testnet):** <https://testnet.nearblocks.io/address/fenceline-vault-8t1bk.testnet>
 **Video:** `{{VIDEO_URL}}`
 **X post:** `{{X_POST_URL}}`
 
@@ -149,6 +150,7 @@ Video: {{VIDEO_URL}}
 - [x] `cargo run -p near_guard_mcp -- --demo` works offline
 - [x] Contract builds to wasm: `cargo build -p guard_vault --target wasm32-unknown-unknown --release`
 - [x] Web MVP deployed to Vercel (no env vars required) — <https://fenceline-near-agent-guard.vercel.app>
+- [x] `GuardVault` deployed to NEAR testnet (`fenceline-vault-8t1bk.testnet`) and two report CIDs anchored; the MVP reads the contract live via `/api/network`
 - [ ] Video recorded (script in `docs/DEMO_SCRIPT.md`) and uploaded → paste into `{{VIDEO_URL}}`
 - [ ] X post published with the repo and video links → paste into `{{X_POST_URL}}`
 - [ ] Form submitted at <https://nearhackathon.com/#apply> before 14 Nov 2026 23:59 UTC

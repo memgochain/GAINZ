@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RangeChart from "@/components/RangeChart";
 import { formatNear } from "@/lib/amount";
+import { ANCHORED_REPORTS, explorerTx } from "@/lib/network";
 import type { RangeReport } from "@/lib/types";
 
 interface Props {
@@ -77,11 +78,9 @@ export default function RangePanel({ report, running }: Props) {
 
   const breach = report.range.observed_max_loss_micro > report.declared_daily_cap_micro;
   const counterexample = report.range.counterexamples[0];
-  const anchorArgs = JSON.stringify({
-    report_hash: report.report_hash,
-    policy_commitment: report.policy_commitment.slice(0, 16) + "…",
-    verdict: report.verdict,
-  });
+  const anchor = Object.values(ANCHORED_REPORTS).find(
+    (entry) => entry.reportHash === report.report_hash,
+  );
 
   const copy = async () => {
     try {
@@ -209,10 +208,20 @@ export default function RangePanel({ report, running }: Props) {
             {copied ? "copied" : "copy"}
           </button>
         </div>
-        <p className="anchor-hint">
-          Anchor on NEAR with the owner key:{" "}
-          <code>vault.anchor_report({anchorArgs})</code>
-        </p>
+        {anchor ? (
+          <p className="anchor-hint anchor-ok">
+            <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}
+            <a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">
+              view the anchor transaction ↗
+            </a>
+          </p>
+        ) : (
+          <p className="anchor-hint">
+            This CID is not anchored. Editing the policy or the seed changes it — that is how the
+            anchor catches a swapped report. Anchoring needs the owner key, which never ships to the
+            browser.
+          </p>
+        )}
         <div className="stat-chips">
           <span className="chip chip-quiet">{report.range.sequences_run} sequences</span>
           <span className="chip chip-quiet">{report.range.actions_simulated} actions</span>

@@ -1,15 +1,22 @@
+import { NETWORK } from "./network";
 import type { Policy } from "./types";
 
+/**
+ * The policy the live testnet vault was initialised with: owner and agent are the
+ * real accounts, and the only allowlisted recipient is the API provider account
+ * that is whitelisted onchain. Edit the fields below and the report CID changes,
+ * which is exactly what the anchor check detects.
+ */
 export const WEAK_POLICY: Policy = {
   version: 1,
-  owner_id: "owner-guard.testnet",
-  vault_id: "vault-guard.testnet",
-  agent_id: "agent-bot.testnet",
+  owner_id: NETWORK.vault,
+  vault_id: NETWORK.vault,
+  agent_id: NETWORK.agent,
   per_tx_cap: 5,
   daily_cap: 10,
   rate_limit_per_hour: 4,
   window_model: "calendar",
-  allowlist: ["api-provider.testnet", "compute-node.testnet"],
+  allowlist: [NETWORK.apiProvider],
   allowed_assets: ["NEAR", "USDC"],
   max_slippage_bps: 100,
   require_zk: true,

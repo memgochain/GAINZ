@@ -23,8 +23,9 @@ export default function ConsolePanel({ decisions, busy, onPay, onSweep, onInject
       </header>
 
       <p className="console-note">
-        Same nine rules the onchain <code>GuardVault</code> enforces. Every approved action returns
-        an IPLD audit CID and a Noir proof hash.
+        Every click runs the same policy engine the MCP server uses: nine rules, the live allowlist
+        and the caps of <code>GuardVault</code>. An approval returns an IPLD audit CID and a Noir
+        proof hash; the onchain limits are read from testnet below.
       </p>
 
       <div className="console-actions">
