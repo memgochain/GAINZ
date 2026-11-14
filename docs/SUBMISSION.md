@@ -155,3 +155,37 @@ Video: {{VIDEO_URL}}
 - [ ] X post published with the repo and video links → paste into `{{X_POST_URL}}`
 - [ ] Form submitted at <https://nearhackathon.com/#apply> before 14 Nov 2026 23:59 UTC
 - [ ] Team lead name, email and NEAR payout account entered in the form
+
+---
+
+## NEAR Hackathon submission checklist
+
+Live demo: <https://gainz-near-agent-guard.vercel.app>
+Repository: <https://github.com/memgochain/GAINZ> (public, MIT, `LICENSE` in the root)
+Demo video: [`docs/gainz-demo.mp4`](gainz-demo.mp4) — 47 s, 1920x1080, no audio
+
+Requirements from <https://nearhackathon.com/HACKATHON.md>:
+
+- [x] Repository public before 2026-11-14T23:59:00Z
+- [x] Reproducible README with "do X, see Y" steps
+- [x] LICENSE file (MIT)
+- [x] Hosted demo that stays up through judging — `https://gainz-near-agent-guard.vercel.app`
+- [x] Demo video recorded from the live site
+- [ ] Public demo post on X: says the project was built at NEAR HACKATHON, tags
+      `@NEARProtocol` and `#NEARHackathon`, attaches the video — **needs the owner's X account**
+- [ ] Submission at <https://nearhackathon.com/#apply> — needs the demo post link and a
+      NEAR wallet address for the prize payout
+
+The submitter must fill in: project name, description (20–2,000 characters), team lead,
+email, team size, tracks, payout wallet address, repository link, demo post link.
+
+### Why the build claim is checkable
+
+`GET /api/contract-verification` hashes `web/contracts/guard_vault.wasm` and compares it with
+the `code_hash` the vault account reports on chain. Both are `CwuPXnTyGhqZ2kN1V2mVJ1fcd5QtBaZsBnGNwVQd2rYS`,
+so the page shows `verified build` instead of `unknown build`. Regenerate the artifact with:
+
+```bash
+cargo build -p guard_vault --target wasm32-unknown-unknown --release
+cp target/wasm32-unknown-unknown/release/guard_vault.wasm web/contracts/guard_vault.wasm
+```
