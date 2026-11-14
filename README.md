@@ -311,3 +311,7 @@ Benchmark (policy from `policy/policy.json`, seed 1337, 200 sequences × 48 step
 - Threat model and attack taxonomy: [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)
 
 Tracks entered with this single submission: **`security`** (lead), **`agents`**, **`business`**.
+
+---
+
+MIT licensed — see [LICENSE](LICENSE).
