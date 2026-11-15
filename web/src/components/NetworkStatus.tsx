@@ -13,7 +13,12 @@ export default function NetworkStatus() {
   const [latency, setLatency] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [buildVerified, setBuildVerified] = useState<boolean | null>(null);
+  /** `null` until the check answers; the two error fields say why it failed. */
+  const [build, setBuild] = useState<{
+    verified: boolean;
+    chainError: string | null;
+    artifactError: string | null;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -39,13 +44,31 @@ export default function NetworkStatus() {
 
   useEffect(() => {
     let active = true;
+    const failed = (message: string) => ({
+      verified: false,
+      chainError: message,
+      artifactError: null,
+    });
     fetch("/api/contract-verification", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
-        if (active) setBuildVerified(payload?.verified === true);
+        if (!active) return;
+        if (!payload) {
+          setBuild(failed("contract-verification request failed"));
+          return;
+        }
+        setBuild({
+          verified: payload.verified === true,
+          chainError: payload.chainError ?? null,
+          artifactError: payload.artifactError ?? null,
+        });
       })
-      .catch(() => {
-        if (active) setBuildVerified(false);
+      .catch((cause) => {
+        if (active) {
+          setBuild(
+            failed(cause instanceof Error ? cause.message : "contract-verification unreachable"),
+          );
+        }
       });
     return () => {
       active = false;
@@ -64,11 +87,17 @@ export default function NetworkStatus() {
         void refresh();
       }}
       title={
-        error
-          ? `NEAR RPC error: ${error}`
-          : `Block ${height ?? "…"} · RPC ${latency ?? "…"}ms · build ${
-              buildVerified === null ? "checking" : buildVerified ? "verified" : "unknown"
-            } · click to refresh, opens the contract on nearblocks`
+        [
+          error ? `NEAR RPC error: ${error}` : `Block ${height ?? "…"} · RPC ${latency ?? "…"}ms`,
+          build === null
+            ? "build: checking"
+            : build.chainError
+              ? `build: unchecked, chain read failed (${build.chainError})`
+              : build.artifactError
+                ? `build: unverified, ${build.artifactError}`
+                : `build: ${build.verified ? "verified" : "unknown"}`,
+          "click to refresh, opens the contract on nearblocks",
+        ].join(" · ")
       }
     >
       <span className={error ? "dot dot-bad" : "dot"} aria-hidden />
@@ -77,9 +106,17 @@ export default function NetworkStatus() {
         : loading && height === null
           ? "connecting…"
           : `testnet · ${height === null ? "…" : height.toLocaleString("en-US")}`}
-      {buildVerified === null ? null : (
-        <span className={buildVerified ? "build-ok" : "build-unknown"}>
-          {` · ${buildVerified ? "verified build" : "unknown build"}`}
+      {build === null ? null : build.chainError ? (
+        <span className="build-error" title={`NEAR RPC error: ${build.chainError}`}>
+          {" · build unchecked · rpc error"}
+        </span>
+      ) : build.artifactError ? (
+        <span className="build-error" title={build.artifactError}>
+          {" · build unverified · artifact missing"}
+        </span>
+      ) : (
+        <span className={build.verified ? "build-ok" : "build-unknown"}>
+          {` · ${build.verified ? "verified build" : "unknown build"}`}
         </span>
       )}
     </a>

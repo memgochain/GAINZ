@@ -1292,6 +1292,10 @@ button.ghost:hover {
 .build-unknown {
   color: var(--amber);
 }
+/* A check that could not run is not a check that failed: red, not amber. */
+.build-error {
+  color: var(--red);
+}
 .dot {
   width: 6px;
   height: 6px;

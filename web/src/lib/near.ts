@@ -45,21 +45,29 @@ async function rpc<T>(method: string, params: unknown): Promise<T> {
 }
 
 /**
- * The deployed bytecode hash of the vault account, or `null` when the chain
- * cannot answer. The verification route compares it with a local build.
+ * The deployed bytecode hash of the vault account. `error` separates "the chain
+ * could not answer" from "this account has no contract", which look identical
+ * to a caller that only sees a null hash.
  */
-export async function accountCodeHash(): Promise<string | null> {
+export interface CodeHashRead {
+  codeHash: string | null;
+  error: string | null;
+}
+
+export async function accountCodeHash(): Promise<CodeHashRead> {
   try {
     const account = await rpc<RpcAccount>("query", {
       request_type: "view_account",
       finality: "final",
       account_id: VAULT,
     });
-    return account.code_hash && account.code_hash !== EMPTY_CODE_HASH
-      ? account.code_hash
-      : null;
-  } catch {
-    return null;
+    const deployed = account.code_hash && account.code_hash !== EMPTY_CODE_HASH;
+    return { codeHash: deployed ? account.code_hash : null, error: null };
+  } catch (error) {
+    return {
+      codeHash: null,
+      error: error instanceof Error ? error.message : "near rpc error",
+    };
   }
 }
 

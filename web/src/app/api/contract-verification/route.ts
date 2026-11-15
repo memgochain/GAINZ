@@ -49,10 +49,16 @@ function localCodeHash(): string | null {
 
 export async function GET() {
   // `codeHash` is the chain's answer, `expectedHash` the one from this build.
-  const [codeHash, expectedHash] = [await accountCodeHash(), localCodeHash()];
+  const chain = await accountCodeHash();
+  const expectedHash = localCodeHash();
   return NextResponse.json({
-    verified: codeHash !== null && codeHash === expectedHash,
-    codeHash,
+    verified: chain.codeHash !== null && chain.codeHash === expectedHash,
+    codeHash: chain.codeHash,
     expectedHash,
+    // Why the comparison came out false, so `unknown build` is never the only
+    // signal: a dead endpoint and a different artifact must look different.
+    chainError: chain.error,
+    artifactError:
+      expectedHash === null ? "release wasm not found in this deployment" : null,
   });
 }
