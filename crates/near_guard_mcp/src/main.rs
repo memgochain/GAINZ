@@ -130,32 +130,30 @@ fn env_key(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|value| !value.trim().is_empty())
 }
 
-/// The demo's agent-intent line: NEAR AI Cloud first (`NEAR_AI_API_KEY`), then
-/// Cerebras (`CEREBRAS_API_KEY`), then a deterministic offline line. Neither key
-/// is required: the demo must work on a laptop with no network at all.
+/// The demo's agent-intent fallback chain, in order: (key env var, label,
+/// endpoint, model). Each provider is optional, and none is required: the demo
+/// must work on a laptop with no network at all.
+const INTENT_PROVIDERS: [(&str, &str, &str, &str); 2] = [
+    (
+        "NEAR_AI_API_KEY",
+        "NEAR AI agent intent",
+        "https://near.ai/v1/chat/completions",
+        "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
+    ),
+    (
+        "CEREBRAS_API_KEY",
+        "Cerebras agent intent",
+        "https://api.cerebras.ai/v1/chat/completions",
+        "llama3.1-8b",
+    ),
+];
+
 async fn agent_intent(prompt: &str) -> (&'static str, String) {
-    if let Some(key) = env_key("NEAR_AI_API_KEY") {
-        if let Some(text) = chat_completion(
-            "https://near.ai/v1/chat/completions",
-            "fireworks::accounts/fireworks/models/llama-v3p1-70b-instruct",
-            Some(&key),
-            prompt,
-        )
-        .await
-        {
-            return ("NEAR AI agent intent", text);
-        }
-    }
-    if let Some(key) = env_key("CEREBRAS_API_KEY") {
-        if let Some(text) = chat_completion(
-            "https://api.cerebras.ai/v1/chat/completions",
-            "llama3.1-8b",
-            Some(&key),
-            prompt,
-        )
-        .await
-        {
-            return ("Cerebras agent intent", text);
+    for (env, label, endpoint, model) in INTENT_PROVIDERS {
+        if let Some(key) = env_key(env) {
+            if let Some(text) = chat_completion(endpoint, model, Some(&key), prompt).await {
+                return (label, text);
+            }
         }
     }
     (

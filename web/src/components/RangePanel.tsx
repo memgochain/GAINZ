@@ -63,7 +63,7 @@ function Share({
 export default function RangePanel({ report, running }: Props) {
   const [copied, setCopied] = useState(false);
   const [tamperedReport, setTamperedReport] = useState<RangeReport | null>(null);
-  const [tamperFailed, setSwapFailed] = useState(false);
+  const [tamperFailed, setTamperFailed] = useState(false);
 
   if (!report) {
     return (
@@ -88,6 +88,11 @@ export default function RangePanel({ report, running }: Props) {
     (entry) => entry.reportHash === shown.report_hash,
   );
   const mismatch = tamperedReport !== null && !anchor;
+  // The report the panel opened with is the one that was anchored; after a
+  // tamper its anchor is what the red line should link back to.
+  const originalAnchor = Object.values(ANCHORED_REPORTS).find(
+    (entry) => entry.reportHash === report.report_hash,
+  );
 
   const copy = async () => {
     try {
@@ -100,7 +105,7 @@ export default function RangePanel({ report, running }: Props) {
   };
 
   const tamperPolicy = async () => {
-    setSwapFailed(false);
+    setTamperFailed(false);
     try {
       const response = await fetch("/api/range", {
         method: "POST",
@@ -117,7 +122,7 @@ export default function RangePanel({ report, running }: Props) {
       const payload = await response.json();
       setTamperedReport(payload.report as RangeReport);
     } catch {
-      setSwapFailed(true);
+      setTamperFailed(true);
     }
   };
 
@@ -249,7 +254,20 @@ export default function RangePanel({ report, running }: Props) {
           <p className="anchor-hint anchor-bad">Could not run the modified policy. Try again.</p>
         ) : null}
 
-        {anchor ? (
+        {mismatch ? (
+          <p className="anchor-hint anchor-bad">
+            <span className="dot dot-bad" aria-hidden /> Anchor mismatch: this edited policy hashes
+            to <code>{shown.report_hash}</code>, which is not the CID anchored on NEAR testnet. The
+            original anchor is{" "}
+            {originalAnchor ? (
+              <a href={explorerTx(originalAnchor.tx)} target="_blank" rel="noreferrer">
+                still on chain ↗
+              </a>
+            ) : (
+              <span>still on chain.</span>
+            )}
+          </p>
+        ) : anchor ? (
           <p className="anchor-hint anchor-ok">
             <span className="dot" aria-hidden /> Anchored on NEAR testnet ({anchor.verdict}) ·{" "}
             <a href={explorerTx(anchor.tx)} target="_blank" rel="noreferrer">
@@ -263,17 +281,6 @@ export default function RangePanel({ report, running }: Props) {
             browser.
           </p>
         )}
-
-        {mismatch ? (
-          <p className="anchor-hint anchor-bad">
-            <span className="dot dot-bad" aria-hidden /> Anchor mismatch: this edited policy hashes
-            to <code>{shown.report_hash}</code>, which is not the CID anchored on NEAR testnet. The
-            original anchor is{" "}
-            <a href={explorerTx(ANCHORED_REPORTS.weak.tx)} target="_blank" rel="noreferrer">
-              still on chain ↗
-            </a>
-          </p>
-        ) : null}
 
         <div className="stat-chips">
           <span className="chip chip-quiet">{shown.range.sequences_run} sequences</span>

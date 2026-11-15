@@ -1,12 +1,10 @@
 import { createHash } from "crypto";
 import { readFileSync } from "fs";
 import { NextResponse } from "next/server";
+import { accountCodeHash } from "@/lib/near";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const VAULT_ID = process.env.NEAR_VAULT_ACCOUNT ?? "fenceline-vault-8t1bk.testnet";
-const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 
 /**
  * Candidate locations of the release wasm, relative to the Next.js app root
@@ -38,26 +36,6 @@ function base58(bytes: Uint8Array): string {
   return encoded || "1";
 }
 
-async function onChainCodeHash(): Promise<string | null> {
-  try {
-    const response = await fetch(RPC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "gainz",
-        method: "query",
-        params: { request_type: "view_account", finality: "final", account_id: VAULT_ID },
-      }),
-    });
-    if (!response.ok) return null;
-    const payload = (await response.json()) as { result?: { code_hash?: string } };
-    return payload.result?.code_hash ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function localCodeHash(): string | null {
   for (const candidate of WASM_CANDIDATES) {
     try {
@@ -70,7 +48,8 @@ function localCodeHash(): string | null {
 }
 
 export async function GET() {
-  const [codeHash, expectedHash] = [await onChainCodeHash(), localCodeHash()];
+  // `codeHash` is the chain's answer, `expectedHash` the one from this build.
+  const [codeHash, expectedHash] = [await accountCodeHash(), localCodeHash()];
   return NextResponse.json({
     verified: codeHash !== null && codeHash === expectedHash,
     codeHash,

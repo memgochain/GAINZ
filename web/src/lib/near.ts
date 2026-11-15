@@ -14,6 +14,9 @@ const VAULT = process.env.NEAR_VAULT_ACCOUNT ?? NETWORK.vault;
 
 const TIMEOUT_MS = 9000;
 
+/** NEAR reports this base58 hash for an account with no contract deployed. */
+const EMPTY_CODE_HASH = "11111111111111111111111111111111";
+
 async function rpc<T>(method: string, params: unknown): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -38,6 +41,25 @@ async function rpc<T>(method: string, params: unknown): Promise<T> {
     return body.result;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * The deployed bytecode hash of the vault account, or `null` when the chain
+ * cannot answer. The verification route compares it with a local build.
+ */
+export async function accountCodeHash(): Promise<string | null> {
+  try {
+    const account = await rpc<RpcAccount>("query", {
+      request_type: "view_account",
+      finality: "final",
+      account_id: VAULT,
+    });
+    return account.code_hash && account.code_hash !== EMPTY_CODE_HASH
+      ? account.code_hash
+      : null;
+  } catch {
+    return null;
   }
 }
 
@@ -192,7 +214,7 @@ export async function networkSnapshot(): Promise<NetworkSnapshot> {
       accountId: VAULT,
       balanceNear: account ? nearFromYocto(account.amount) : "0",
       storageUsed: account?.storage_usage ?? 0,
-      hasContract: !!account && account.code_hash !== "11111111111111111111111111111111",
+      hasContract: !!account && account.code_hash !== EMPTY_CODE_HASH,
     },
     vault: config
       ? {
